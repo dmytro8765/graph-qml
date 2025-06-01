@@ -114,7 +114,7 @@ if __name__ == "__main__":
         .to_csv(base_output / (ext + f"predictions-test-{flags.name}.csv"), index=False)
     print('Fourth file saved')
 
-    ############### FOR EVERYTHING EXCEPT MAX CUT OVER ###############'''
+    ############### FOR EVERYTHING EXCEPT MAX CUT OVER ############### '''
 
     ################### FOR MAX CUT ###################
     
