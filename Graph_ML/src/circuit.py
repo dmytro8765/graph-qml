@@ -904,6 +904,36 @@ def Cn_circuit_with_anti_part(inputs: torch.Tensor, weights: torch.Tensor) -> to
     return qml.expval(gate_prod(qml.Z(index) for index in range(num_qubits)))
 
 
+def subgraph_circuit(inputs: torch.Tensor, weights: torch.Tensor) -> torch.Tensor:
+    """Create a permutation invariant circuit for the subgraph problem.
+
+    It consists of a graph encoding layer and a strongly entangling layer, followed by a series of permutation invariant layers.
+
+    It is expected that two distinct graphs are given as inputs.
+    The circuit can then be used to predict whether the second (generally smaller) graph is a subgraph of the first graph.
+
+    The shape of the weights argument is expected to be (num_layers, 3).
+    """
+    num_qubits = get_num_qubits_from_inputs(inputs)
+
+    graph_state(inputs, num_qubits)
+
+    qml.StronglyEntanglingLayers(weights, range(num_qubits))
+
+    if weights.ndim != 2 or weights.shape[1] != 3:
+        weights_shape = "(num_layers, 3)"
+        raise WeightsShapeError(weights_shape)
+
+    num_layers, _ = weights.shape
+
+    for layer_index in range(num_layers):
+        Sn_X_layer(weight=weights[layer_index, 0], num_qubits=num_qubits)
+        Sn_Y_layer(weight=weights[layer_index, 1], num_qubits=num_qubits)
+        Sn_ZZ_layer(weight=weights[layer_index, 2], num_qubits=num_qubits)
+
+    return [qml.expval(qml.Z(i)) for i in range(num_qubits)] # per qubit
+
+
 def Dn_circuit(inputs: torch.Tensor, weights: torch.Tensor) -> torch.Tensor:
     """Create a circuit which is invariant under dihedral permutations.
 
