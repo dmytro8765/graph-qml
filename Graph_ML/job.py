@@ -77,6 +77,10 @@ if __name__ == "__main__":
         weight_shapes = {"weights_z": (flags.layers, flags.qubits),
                          "weights_xx_yy": (flags.layers, math.comb(flags.qubits, 2))}
         circ = circuit.Energy_circuit
+    elif flags.circuit == "subgraph_circuit":
+        weight_shapes = {"weights_sn": (flags.layers, 3),
+                         "weights_strongly_entangled": (flags.layers, flags.qubits, 3)}
+        circ = circuit.subgraph_circuit
     else:
         msg = f"Circuit {flags.circuit} is unkown."
         raise ValueError(msg)
@@ -89,7 +93,7 @@ if __name__ == "__main__":
     qnode = qml.QNode(circ, device=dev, interface="torch")
 
     base = pathlib.Path(flags.base)
-    base_output = pathlib.Path("/Users/home/Quantum_Computing/Pennylane/Graph_ML/output/max_cut")
+    base_output = pathlib.Path("/home/m/menzell/work/invariant-quantum-circuit/Pennylane/Pennylane_ML/Graph_ML/output/max_cut")
 
     if flags.task in ["Connectedness", "Bipartiteness", "Connected_plus_Bipartite", "Hamiltonian"]:
         dataset = utils.load_patterns(base / flags.data, flags.qubits)

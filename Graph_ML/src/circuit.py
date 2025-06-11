@@ -904,32 +904,41 @@ def Cn_circuit_with_anti_part(inputs: torch.Tensor, weights: torch.Tensor) -> to
     return qml.expval(gate_prod(qml.Z(index) for index in range(num_qubits)))
 
 
-def subgraph_circuit(inputs: torch.Tensor, weights: torch.Tensor) -> torch.Tensor:
+def subgraph_circuit(inputs: torch.Tensor, weights_strongly_entangled: torch.Tensor, weights_Sn: torch.Tensor) -> torch.Tensor:
     """Create a permutation invariant circuit for the subgraph problem.
-
-    It consists of a graph encoding layer and a strongly entangling layer, followed by a series of permutation invariant layers.
 
     It is expected that two distinct graphs are given as inputs.
     The circuit can then be used to predict whether the second (generally smaller) graph is a subgraph of the first graph.
 
-    The shape of the weights argument is expected to be (num_layers, 3).
+    The circuit consists of a graph encoding layer and a strongly entangling layer,
+    followed by a series of permutation invariant layers, which are distinctly applied to both graphs.
+
+    The shape of the weights_strongly_entangled argument is expected to be (num_layers, num_qubits, 3).
+    
+    The shape of the weights_Sn argument is expected to be (num_layers, 6).
+    Per Sn layer, the first three weights are used for the first graph and the last three weights for the second graph.
     """
     num_qubits = get_num_qubits_from_inputs(inputs)
 
     graph_state(inputs, num_qubits)
 
-    qml.StronglyEntanglingLayers(weights, range(num_qubits))
+    weights_se_shape = "(num_layers, num_qubits, 3)"
+    if weights_strongly_entangled.ndim != 3 or weights_strongly_entangled.shape[1] != num_qubits or weights_strongly_entangled.shape[2] != 3:
+        raise WeightsShapeError(weights_se_shape)
+    num_se_layers = weights_strongly_entangled.shape[0]
+    ranges = tuple((layer % (2)) + 1 for layer in range(num_se_layers))
+    qml.StronglyEntanglingLayers(weights=weights_strongly_entangled, wires=range(num_qubits), ranges=ranges)
 
-    if weights.ndim != 2 or weights.shape[1] != 3:
-        weights_shape = "(num_layers, 3)"
-        raise WeightsShapeError(weights_shape)
+    if weights_Sn.ndim != 2 or weights_Sn.shape[1] != 6:
+        weights_Sn_shape = "(num_layers, 6)"
+        raise WeightsShapeError(weights_Sn_shape)
 
-    num_layers, _ = weights.shape
+    num_Sn_layers, _ = weights_Sn.shape
 
-    for layer_index in range(num_layers):
-        Sn_X_layer(weight=weights[layer_index, 0], num_qubits=num_qubits)
-        Sn_Y_layer(weight=weights[layer_index, 1], num_qubits=num_qubits)
-        Sn_ZZ_layer(weight=weights[layer_index, 2], num_qubits=num_qubits)
+    for layer_index in range(num_Sn_layers):
+        Sn_X_layer(weight=weights_Sn[layer_index, 0], num_qubits=num_qubits)
+        Sn_Y_layer(weight=weights_Sn[layer_index, 1], num_qubits=num_qubits)
+        Sn_ZZ_layer(weight=weights_Sn[layer_index, 2], num_qubits=num_qubits)
 
     return [qml.expval(qml.Z(i)) for i in range(num_qubits)] # per qubit
 
