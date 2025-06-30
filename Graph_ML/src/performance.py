@@ -6,6 +6,7 @@ import pennylane as qml
 import torch
 from sklearn.model_selection import ShuffleSplit
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 def fit(circuit: qml.QNode,
@@ -46,6 +47,16 @@ def fit(circuit: qml.QNode,
 
         model = qml.qnn.TorchLayer(circuit, circuit_weight_shapes)
         model.load_state_dict(init_weights)
+
+        # ====== DRAW THE CIRCUIT BEFORE TRAINING ======
+
+        # Extract one sample input from your dataset
+        sample_x = dataset.tensors[0][0]   # shape: (input_dim,)
+        sample_weights = init_weights["weights"]
+
+        # Matplotlib circuit diagram
+        qml.draw_mpl(circuit)(sample_x, sample_weights)
+        plt.show()
 
         optimizer = torch.optim.SGD(model.parameters(), lr=0.08)
 

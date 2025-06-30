@@ -75,6 +75,15 @@ def load_patterns(file_path: str, num_nodes: int) -> torch.utils.data.TensorData
     Y = patterns[:, num_nodes**2]
     return torch.utils.data.TensorDataset(X.float(), Y.float())
 
+def load_patterns_subgraph(file_path: str, num_nodes_main: int, num_nodes_sub: int) -> torch.utils.data.TensorDataset:
+    """Load dataset."""
+    patterns = torch.load(file_path)
+    X_main = patterns[:, :num_nodes_main**2] # torch.Size([3000, 36])
+    X_sub = patterns[:, num_nodes_main**2:num_nodes_main**2 + num_nodes_sub**2] # torch.Size([3000, 16])
+    X_main_and_sub = patterns[:, num_nodes_main**2 + num_nodes_sub**2:-1] # torch.Size([3000, 100])
+    Y = patterns[:, -1] # torch.Size([3000])
+    return torch.utils.data.TensorDataset(X_main.float(), X_sub.float(), X_main_and_sub.float(), Y.float())
+
 def load_patterns_per_qubit(file_path: str, num_nodes: int) -> torch.utils.data.TensorDataset:
     """Load dataset."""
     patterns = torch.load(file_path)

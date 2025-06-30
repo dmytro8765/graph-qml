@@ -239,6 +239,7 @@ def Cn_kbody_Z_layer(weight: torch.Tensor, k: int, num_qubits: int) -> None:
     else:
         for indices in (((n + i) % num_qubits for i in range(k)) for n in range(num_qubits)):
           qml.exp(gate_prod(qml.PauliZ(index) for index in indices), coeff=1j*weight)
+
 # End of the three seperated methods.
 ################################################################################
 
@@ -506,7 +507,7 @@ def Sn_circuit(inputs: torch.Tensor, weights: torch.Tensor) -> torch.Tensor:
 def Sn_circuit_per_qubit(inputs: torch.Tensor, weights: torch.Tensor) -> torch.Tensor:
     """Create the permutation equivariant circuit for graph predictions.
 
-    Here, compared to the Sn circuit above: separate output for each qubit (binary classifiction for each qubit)
+    Here, compared to the Sn circuit above: seperate output for each qubit (binary classifiction for each qubit)
 
     """
     num_qubits = get_num_qubits_from_inputs(inputs)
@@ -940,8 +941,37 @@ def subgraph_circuit(inputs: torch.Tensor, weights_strongly_entangled: torch.Ten
         Sn_Y_layer(weight=weights_Sn[layer_index, 1], num_qubits=num_qubits)
         Sn_ZZ_layer(weight=weights_Sn[layer_index, 2], num_qubits=num_qubits)
 
-    return [qml.expval(qml.Z(i)) for i in range(num_qubits)] # per qubit
+    return [qml.expval(gate_prod(qml.Z(i)) for i in range(num_qubits))] 
 
+def subgraph_other_circuit(inputs: torch.Tensor, weights_sn: torch.Tensor) -> torch.Tensor:
+
+    main_num_qubits = 6
+    sub_num_qubits = 4
+
+    graph_state(inputs, main_num_qubits + sub_num_qubits)
+
+    # Approach 1: Two separate Sn blocks, one on the main graph, one on the subgraph.
+    if weights_sn.ndim != 2 or weights_sn.shape[1] != 4:
+        weights_shape = "(num_layers, 4)"
+        raise WeightsShapeError(weights_shape)
+    
+    num_layers, _ = weights_sn.shape
+
+    for layer_index in range(num_layers):
+        Sn_X_layer(weight=weights_sn[layer_index, 0], num_qubits=main_num_qubits+sub_num_qubits)
+        Sn_Y_layer(weight=weights_sn[layer_index, 1], num_qubits=main_num_qubits+sub_num_qubits)
+        Sn_ZZ_layer(weight=weights_sn[layer_index, 2], num_qubits=main_num_qubits)
+        for i in range(sub_num_qubits - 1): # apply same Sn block to subgraph qubits
+            j = i
+            while j < sub_num_qubits - 1:
+                qml.CNOT(wires=[main_num_qubits + i, main_num_qubits + j + 1])
+                qml.RZ(weights_sn[layer_index, 3], wires=main_num_qubits + j + 1)
+                qml.CNOT(wires=[main_num_qubits + i, main_num_qubits + j + 1])
+                j += 1
+    
+    # Approach 2: 
+
+    return qml.expval(gate_prod(qml.Z(index) for index in range(main_num_qubits))) # 1 output based on main nodes measurements
 
 def Dn_circuit(inputs: torch.Tensor, weights: torch.Tensor) -> torch.Tensor:
     """Create a circuit which is invariant under dihedral permutations.

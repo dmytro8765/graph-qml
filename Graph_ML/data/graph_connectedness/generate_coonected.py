@@ -7,7 +7,7 @@ import torch
 dataset = []
 num_samples = 3000
 type_graph = 0
-qubits = 8
+qubits = 4
 for _ in range(num_samples):
     p = random.uniform(0.3, 0.9)
     n = random.randint(2, 6)
@@ -27,4 +27,4 @@ for _ in range(num_samples):
     type_graph = (type_graph + 1)%2
     dataset.append(array)
 dataset = torch.tensor(np.array(dataset))
-torch.save(dataset, "/Users/home/qiskit_env/Pennylane/data/graph_connectedness/nodes_8-graphs_3000.pt")
+torch.save(dataset, "/Users/home/Quantum_Computing/Pennylane/Graph_ML/data/graph_connectedness/nodes_4-graphs_3000.pt")
