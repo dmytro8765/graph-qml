@@ -787,7 +787,6 @@ def Cn_circuit(inputs: torch.Tensor, weights: torch.Tensor, spacing: int | list[
         Sn_Y_layer(weight=weights[layer_index, 1], num_qubits=num_qubits) # also commutes with Cn
         for i, space in enumerate(spacing):
             Cn_ZZ_layer(weight=weights[layer_index, 2 + i], num_qubits=num_qubits, spacing=space)
-
     return qml.expval(gate_prod(qml.Z(index) for index in range(num_qubits)))
 
 def Cn_circuit_per_qubit(inputs: torch.Tensor, weights: torch.Tensor, spacing: int | list[int] = 0) -> torch.Tensor:

@@ -10,7 +10,13 @@ import networkx as nx
 import numpy as np
 import pennylane as qml
 import torch
+import pandas as pd
 
+def append_to_csv(data, path, columns):
+    if "target" in columns:
+        pd.DataFrame(data)[columns].explode("target").to_csv(path, mode="a", header=False, index=False)
+    else:
+        pd.DataFrame(data)[columns].explode("prediction").to_csv(path, mode="a", header=False, index=False)
 
 def graph_connectedness(*, num_graphs: int, num_nodes: int,
                         num_edges: int | float, stop_after: int = 100_000) -> torch.utils.data.TensorDataset:

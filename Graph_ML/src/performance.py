@@ -7,10 +7,13 @@ import torch
 from sklearn.model_selection import ShuffleSplit
 import numpy as np
 
+from .utils import append_to_csv
+
 
 def fit(circuit: qml.QNode,
         circuit_weight_shapes: dict[str, tuple],
         dataset: torch.utils.data.TensorDataset,
+        file_names: dict,
         samplings: int = 30,
         extra_data: torch.Tensor = None,
         epochs: int = 50) -> tuple[dict[str, list[tuple[int, int, list[float]]]],
@@ -18,7 +21,7 @@ def fit(circuit: qml.QNode,
                                    list[tuple[int, int, list[float]]]]:
     
     # We shuffle the dataset
-    subsampling = ShuffleSplit(n_splits=samplings, train_size=10, test_size=2990)
+    subsampling = ShuffleSplit(n_splits=samplings, train_size=100, test_size=2900, random_state=42)
 
     prediction_history: dict[str, list[tuple[int, int, list[float]]]] = {"test": [], "train": []}
     targets: dict[str, list[tuple[int, list[float]]]] = {"test": [], "train": []}
@@ -39,10 +42,21 @@ def fit(circuit: qml.QNode,
 
         x_train, y_train = dataset[train_indices]
         x_test, y_test = dataset[test_indices]
+        x_test, y_test = x_test[:50], y_test[:50]
 
         
-        targets["train"].append((sampling, y_train.tolist()))
-        targets["test"].append((sampling, y_test.tolist()))
+        #targets["train"].append((sampling, y_train.tolist()))
+        append_to_csv(
+            {"sampling": sampling, "target": y_train.tolist()},
+            file_names["targets-train"],
+            ["sampling", "target"]
+        )
+        #targets["test"].append((sampling, y_test.tolist()))
+        append_to_csv(
+            {"sampling": sampling, "target": y_test.tolist()},
+            file_names["targets-test"],
+            ["sampling", "target"]
+        )
 
         model = qml.qnn.TorchLayer(circuit, circuit_weight_shapes)
         model.load_state_dict(init_weights)
@@ -57,30 +71,59 @@ def fit(circuit: qml.QNode,
 
         model.eval()
         with torch.no_grad():
-            prediction_history["train"].append((sampling, 0, model(x_train).tolist()))
-            prediction_history["test"].append((sampling, 0, model(x_test).tolist()))
+            pred_train_before = model(x_train).tolist()
+            #prediction_history["train"].append((sampling, 0, pred_train_before))
+            append_to_csv(
+                {"sampling": sampling, "epoch": 0, "prediction": pred_train_before},
+                file_names["predictions-train"],
+                ["sampling", "epoch", "prediction"]
+            )
+            pred_test_before = model(x_test).tolist()
+            #prediction_history["test"].append((sampling, 0, pred_test_before))
+            append_to_csv(
+                {"sampling": sampling, "epoch": 0, "prediction": pred_test_before},
+                file_names["predictions-test"],
+                ["sampling", "epoch", "prediction"]
+            )
 
         for epoch in range(epochs):
-            if(epoch % 10 == 0):
-                print("Sampling: ", sampling, "; Epoch: ", epoch)
+            #if(epoch % 10 == 0):
+            print("Sampling: ", sampling, "; Epoch: ", epoch)
             model.train()
+            pred_epoch = []
             for xs, ys in data_loader:
                 optimizer.zero_grad()
-                loss_evaluated = loss(model(xs), ys)
+                pred_batch = model(xs)
+                pred_epoch.extend(pred_batch.tolist())
+                loss_evaluated = loss(pred_batch, ys)
                 loss_evaluated.backward()
                 optimizer.step()
+                print("Another batch (25 data points) done.")
 
             #weight_history.append((sampling, epoch, model.state_dict().get("weights").reshape(-1).tolist()))
+            torch.save(model.state_dict(), file_names["weights"])
+            #prediction_history["train"].append((sampling, epoch + 1, pred_epoch))
+            append_to_csv(
+                {"sampling": sampling, "epoch": epoch + 1, "prediction": pred_epoch},
+                file_names["predictions-train"],
+                ["sampling", "epoch", "prediction"]
+            )
 
             model.eval()
             with torch.no_grad():
 
-                logits_train = model(x_train)
-                preds_train = (torch.sigmoid(logits_train))
-                y_train_int = y_train.int()
+                #logits_train = model(x_train)
+                #preds_train = (torch.sigmoid(logits_train))
+                #y_train_int = y_train.int()
 
-                prediction_history["train"].append((sampling, epoch + 1, model(x_train).tolist()))
-                prediction_history["test"].append((sampling, epoch + 1, model(x_test).tolist()))
+                #prediction_history["train"].append((sampling, epoch + 1, model(x_train).tolist()))
+                #prediction_history["test"].append((sampling, epoch + 1, model(x_test).tolist()))
+                append_to_csv(
+                    {"sampling": sampling, "epoch": epoch + 1, "prediction": model(x_test).tolist()},
+                    file_names["predictions-test"],
+                    ["sampling", "epoch", "prediction"]
+                )
+
 
                 '''print(f"\nSampling {sampling} | Epoch {epoch + 1}")
                 print("TRAINING PREDICTIONS VS LABELS (per graph):")
@@ -105,20 +148,21 @@ def fit(circuit: qml.QNode,
                 extra_predictions_5.append(extra_pred[5])
                 extra_predictions_6.append(extra_pred[6])
 
-        final_extra_predictions = []
-        final_extra_predictions.append(np.mean(extra_predictions_0))
-        final_extra_predictions.append(np.mean(extra_predictions_1))
-        final_extra_predictions.append(np.mean(extra_predictions_2))
-        final_extra_predictions.append(np.mean(extra_predictions_3))
-        final_extra_predictions.append(np.mean(extra_predictions_4))
-        final_extra_predictions.append(np.mean(extra_predictions_5))
-        final_extra_predictions.append(np.mean(extra_predictions_6))
+        if extra_data is not None:
+            final_extra_predictions = []
+            final_extra_predictions.append(np.mean(extra_predictions_0))
+            final_extra_predictions.append(np.mean(extra_predictions_1))
+            final_extra_predictions.append(np.mean(extra_predictions_2))
+            final_extra_predictions.append(np.mean(extra_predictions_3))
+            final_extra_predictions.append(np.mean(extra_predictions_4))
+            final_extra_predictions.append(np.mean(extra_predictions_5))
+            final_extra_predictions.append(np.mean(extra_predictions_6))
 
-        list_names = ['Fully connected + 1', 'Tethered 1', 'Clean split', 'Minimum graph', 'Minimum disconnect', 'Single tree', 'Deeper tree']
+            list_names = ['Fully connected + 1', 'Tethered 1', 'Clean split', 'Minimum graph', 'Minimum disconnect', 'Single tree', 'Deeper tree']
 
-        if sampling == samplings - 1:
-            for i, (pred, target) in enumerate(zip(final_extra_predictions, extra_y.tolist())):
-                print(f"{list_names[i]}: Mean prediction = {pred:.4f}, Target = {target}")
-                #print(f"Test {i+1}: Mean prediction = {(np.sign(pred)+1)/2}, Target = {target}")'''
+            if sampling == samplings - 1:
+                for i, (pred, target) in enumerate(zip(final_extra_predictions, extra_y.tolist())):
+                    print(f"{list_names[i]}: Mean prediction = {pred:.4f}, Target = {target}")
+                    #print(f"Test {i+1}: Mean prediction = {(np.sign(pred)+1)/2}, Target = {target}")'''
 
     return prediction_history, targets, weight_history
