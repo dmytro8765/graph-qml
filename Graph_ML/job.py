@@ -102,8 +102,8 @@ if __name__ == "__main__":
     print(service.backends())
     #ibm_backend = service.backend("ibm_kingston")
     ibm_backend = FakeTorino()
-    dev = qml.device("default.qubit", wires=flags.qubits)
-    #dev = qml.device("qiskit.remote", wires=flags.qubits, backend=ibm_backend, seed_transpiler=42, seed_estimator=42, shots=1000, optimization_level=1, dynamical_decoupling={'enable': True}, resilience_level=0, log_level='INFO')
+    #dev = qml.device("default.qubit", wires=flags.qubits)
+    dev = qml.device("qiskit.remote", wires=flags.qubits, backend=ibm_backend, seed_transpiler=42, seed_estimator=42, shots=1000, optimization_level=1, dynamical_decoupling={'enable': True}, resilience_level=0, log_level='INFO')
     qnode = qml.QNode(circ, device=dev, interface="torch")
 
     base = pathlib.Path(flags.base)
