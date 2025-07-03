@@ -6,6 +6,7 @@ import pennylane as qml
 import torch
 from sklearn.model_selection import ShuffleSplit
 import numpy as np
+import pandas as pd
 
 from .utils import append_to_csv
 
@@ -16,17 +17,21 @@ def fit(circuit: qml.QNode,
         file_names: dict,
         samplings: int = 30,
         extra_data: torch.Tensor = None,
-        epochs: int = 50) -> tuple[dict[str, list[tuple[int, int, list[float]]]],
+        epochs: int = 50,
+        resume_at: int = -1) -> tuple[dict[str, list[tuple[int, int, list[float]]]],
                                    dict[str, list[tuple[int, list[float]]]],
                                    list[tuple[int, int, list[float]]]]:
     
     # We shuffle the dataset
-    subsampling = ShuffleSplit(n_splits=samplings, train_size=100, test_size=2900, random_state=42)
+    subsampling = ShuffleSplit(n_splits=samplings, train_size=10, test_size=2990, random_state=42)
 
     prediction_history: dict[str, list[tuple[int, int, list[float]]]] = {"test": [], "train": []}
     targets: dict[str, list[tuple[int, list[float]]]] = {"test": [], "train": []}
     weight_history: list[tuple[int, int, list[float]]] = []
-    init_weights = collections.OrderedDict([(arg_name, torch.rand(shape)) for arg_name, shape in circuit_weight_shapes.items()])
+    if resume_at > -1:
+        init_weights = None
+    else:
+        init_weights = collections.OrderedDict([(arg_name, torch.rand(shape)) for arg_name, shape in circuit_weight_shapes.items()])
 
     ######################## Block for Edge-Cases ########################
     extra_predictions_0 = []
@@ -42,24 +47,29 @@ def fit(circuit: qml.QNode,
 
         x_train, y_train = dataset[train_indices]
         x_test, y_test = dataset[test_indices]
-        x_test, y_test = x_test[:50], y_test[:50]
+        x_test, y_test = x_test[:5], y_test[:5]
 
         
         #targets["train"].append((sampling, y_train.tolist()))
-        append_to_csv(
-            {"sampling": sampling, "target": y_train.tolist()},
-            file_names["targets-train"],
-            ["sampling", "target"]
-        )
-        #targets["test"].append((sampling, y_test.tolist()))
-        append_to_csv(
-            {"sampling": sampling, "target": y_test.tolist()},
-            file_names["targets-test"],
-            ["sampling", "target"]
-        )
+        if resume_at == -1:
+            append_to_csv(
+                {"sampling": sampling, "target": y_train.tolist()},
+                file_names["targets-train"],
+                ["sampling", "target"]
+            )
+            #targets["test"].append((sampling, y_test.tolist()))
+            append_to_csv(
+                {"sampling": sampling, "target": y_test.tolist()},
+                file_names["targets-test"],
+                ["sampling", "target"]
+            )
 
         model = qml.qnn.TorchLayer(circuit, circuit_weight_shapes)
-        model.load_state_dict(init_weights)
+        if init_weights is not None:
+            model.load_state_dict(init_weights)
+            torch.save(model.state_dict(), file_names["weights"])
+        else:
+            model.load_state_dict(torch.load(file_names["weights"]))
 
         optimizer = torch.optim.SGD(model.parameters(), lr=0.08)
 
@@ -69,45 +79,49 @@ def fit(circuit: qml.QNode,
             torch.utils.data.TensorDataset(*dataset[train_indices]), batch_size=25, shuffle=True, drop_last=False,
         )
 
-        model.eval()
-        with torch.no_grad():
-            pred_train_before = model(x_train).tolist()
-            #prediction_history["train"].append((sampling, 0, pred_train_before))
-            append_to_csv(
-                {"sampling": sampling, "epoch": 0, "prediction": pred_train_before},
-                file_names["predictions-train"],
-                ["sampling", "epoch", "prediction"]
-            )
-            pred_test_before = model(x_test).tolist()
-            #prediction_history["test"].append((sampling, 0, pred_test_before))
-            append_to_csv(
-                {"sampling": sampling, "epoch": 0, "prediction": pred_test_before},
-                file_names["predictions-test"],
-                ["sampling", "epoch", "prediction"]
-            )
+        if resume_at == -1:
+            model.eval()
+            with torch.no_grad():
+                pred_train_before = model(x_train).tolist()
+                #prediction_history["train"].append((sampling, 0, pred_train_before))
+                append_to_csv(
+                    {"sampling": sampling, "epoch": 0, "prediction": pred_train_before},
+                    file_names["predictions-train"],
+                    ["sampling", "epoch", "prediction"]
+                )
+                pred_test_before = model(x_test).tolist()
+                #prediction_history["test"].append((sampling, 0, pred_test_before))
+                append_to_csv(
+                    {"sampling": sampling, "epoch": 0, "prediction": pred_test_before},
+                    file_names["predictions-test"],
+                    ["sampling", "epoch", "prediction"]
+                )
+            start_epoch = 0
+        else:
+            start_epoch = resume_at
 
-        for epoch in range(epochs):
+        for epoch in range(start_epoch, epochs):
             #if(epoch % 10 == 0):
             print("Sampling: ", sampling, "; Epoch: ", epoch)
             model.train()
-            pred_epoch = []
+            #pred_epoch = []
             for xs, ys in data_loader:
                 optimizer.zero_grad()
                 pred_batch = model(xs)
-                pred_epoch.extend(pred_batch.tolist())
+                append_to_csv(
+                    {"sampling": sampling, "epoch": epoch + 1, "prediction": pred_batch.tolist()},
+                    file_names["predictions-train"],
+                    ["sampling", "epoch", "prediction"]
+                )
+                #pred_epoch.extend(pred_batch.tolist())
                 loss_evaluated = loss(pred_batch, ys)
                 loss_evaluated.backward()
                 optimizer.step()
+                torch.save(model.state_dict(), file_names["weights"])
                 print("Another batch (25 data points) done.")
 
             #weight_history.append((sampling, epoch, model.state_dict().get("weights").reshape(-1).tolist()))
-            torch.save(model.state_dict(), file_names["weights"])
             #prediction_history["train"].append((sampling, epoch + 1, pred_epoch))
-            append_to_csv(
-                {"sampling": sampling, "epoch": epoch + 1, "prediction": pred_epoch},
-                file_names["predictions-train"],
-                ["sampling", "epoch", "prediction"]
-            )
 
             model.eval()
             with torch.no_grad():
@@ -118,8 +132,9 @@ def fit(circuit: qml.QNode,
 
                 #prediction_history["train"].append((sampling, epoch + 1, model(x_train).tolist()))
                 #prediction_history["test"].append((sampling, epoch + 1, model(x_test).tolist()))
+                test_results = model(x_test)
                 append_to_csv(
-                    {"sampling": sampling, "epoch": epoch + 1, "prediction": model(x_test).tolist()},
+                    {"sampling": sampling, "epoch": epoch + 1, "prediction": test_results.tolist()},
                     file_names["predictions-test"],
                     ["sampling", "epoch", "prediction"]
                 )

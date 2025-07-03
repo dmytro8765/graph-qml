@@ -29,6 +29,7 @@ if __name__ == "__main__":
     parser.add_argument("-t", "--task", help = "Select task to be trained for", default = "Connectedness")
     parser.add_argument("-d", "--data", help="filename for dataset", default="nodes_6-graphs_3000-edges_5_6_7.pt", type=str)
     parser.add_argument("-e", "--epochs", help="number of epochs", default=50, type=int)
+    parser.add_argument("-r", "--resume_at_epoch", help="epoch after which to resume", default=-1, type=int)
     parser.add_argument("-s", "--samplings", help="number of samplings", default=30, type=int)
 
     flags = parser.parse_args()
@@ -99,10 +100,10 @@ if __name__ == "__main__":
     service = QiskitRuntimeService.save_account(token=TOKEN, instance=CRN, set_as_default=True, overwrite=True)
     service = QiskitRuntimeService()
     print(service.backends())
-    ibm_backend = service.backend("ibm_kingston")
-    #ibm_backend = FakeTorino()
-    #dev = qml.device("default.qubit", wires=flags.qubits)
-    dev = qml.device("qiskit.remote", wires=flags.qubits, backend=ibm_backend, seed_transpiler=42, seed_estimator=42, shots=1000, optimization_level=1, dynamical_decoupling={'enable': True}, resilience_level=0, log_level='INFO')
+    #ibm_backend = service.backend("ibm_kingston")
+    ibm_backend = FakeTorino()
+    dev = qml.device("default.qubit", wires=flags.qubits)
+    #dev = qml.device("qiskit.remote", wires=flags.qubits, backend=ibm_backend, seed_transpiler=42, seed_estimator=42, shots=1000, optimization_level=1, dynamical_decoupling={'enable': True}, resilience_level=0, log_level='INFO')
     qnode = qml.QNode(circ, device=dev, interface="torch")
 
     base = pathlib.Path(flags.base)
@@ -114,20 +115,20 @@ if __name__ == "__main__":
         file_names = {"predictions-train": base_output / (ext + f"predictions-train-{flags.name}.csv"), "targets-train": base_output / (ext + f"targets-train-{flags.name}.csv"),
                       "predictions-test": base_output / (ext + f"predictions-test-{flags.name}.csv"), "targets-test": base_output / (ext + f"targets-test-{flags.name}.csv"),
                       "weights": base_output / (ext + "weights")}
-        # Write header row once
-        pd.DataFrame(columns=["sampling", "epoch", "prediction"]).to_csv(
-            file_names["predictions-train"], index=False
-        )
-        pd.DataFrame(columns=["sampling", "target"]).to_csv(
-            file_names["targets-train"], index=False
-        )
-        pd.DataFrame(columns=["sampling", "epoch", "prediction"]).to_csv(
-            file_names["predictions-test"], index=False
-        )
-        pd.DataFrame(columns=["sampling", "target"]).to_csv(
-            file_names["targets-test"], index=False
-        )
-        predictions, targets, weights = performance.fit(qnode, weight_shapes, dataset, samplings=flags.samplings, epochs=flags.epochs, file_names=file_names)
+        if flags.resume_at_epoch == -1:
+            pd.DataFrame(columns=["sampling", "epoch", "prediction"]).to_csv(
+                file_names["predictions-train"], index=False
+            )
+            pd.DataFrame(columns=["sampling", "target"]).to_csv(
+                file_names["targets-train"], index=False
+            )
+            pd.DataFrame(columns=["sampling", "epoch", "prediction"]).to_csv(
+                file_names["predictions-test"], index=False
+            )
+            pd.DataFrame(columns=["sampling", "target"]).to_csv(
+                file_names["targets-test"], index=False
+            )
+        predictions, targets, weights = performance.fit(qnode, weight_shapes, dataset, samplings=flags.samplings, epochs=flags.epochs, file_names=file_names, resume_at=flags.resume_at_epoch)
         print("Run finished!")
 
         '''
