@@ -27,7 +27,7 @@ def fit(circuit: qml.QNode,
                                    list[tuple[int, int, list[float]]]]:
     
     # We shuffle the dataset
-    subsampling = ShuffleSplit(n_splits=samplings, train_size=100, test_size=2900, random_state=42)
+    subsampling = ShuffleSplit(n_splits=samplings, train_size=6, test_size=2994, random_state=42)
 
     prediction_history: dict[str, list[tuple[int, int, list[float]]]] = {"test": [], "train": []}
     targets: dict[str, list[tuple[int, list[float]]]] = {"test": [], "train": []}
@@ -51,7 +51,7 @@ def fit(circuit: qml.QNode,
 
         x_train, y_train = dataset[train_indices]
         x_test, y_test = dataset[test_indices]
-        x_test, y_test = x_test[:50], y_test[:50]
+        x_test, y_test = x_test[:2], y_test[:2]
 
         
         #targets["train"].append((sampling, y_train.tolist()))
@@ -80,7 +80,7 @@ def fit(circuit: qml.QNode,
         loss = torch.nn.BCEWithLogitsLoss()
 
         data_loader = torch.utils.data.DataLoader(
-            torch.utils.data.TensorDataset(*dataset[train_indices]), batch_size=25, shuffle=True, drop_last=False,
+            torch.utils.data.TensorDataset(*dataset[train_indices]), batch_size=2, shuffle=True, drop_last=False,
         )
 
         if resume_at == -1:
