@@ -103,8 +103,8 @@ if __name__ == "__main__":
     service = QiskitRuntimeService.save_account(token=TOKEN, instance=CRN, set_as_default=True, overwrite=True)
     service = QiskitRuntimeService()
     print(service.backends())
-    #ibm_backend = service.backend("ibm_kingston")
-    ibm_backend = FakeTorino()
+    ibm_backend = service.backend("ibm_kingston")
+    #ibm_backend = FakeTorino()
     #dev = qml.device("default.qubit", wires=flags.qubits)
     dev = qml.device("qiskit.remote", wires=flags.qubits, backend=ibm_backend, seed_transpiler=42, seed_estimator=42, shots=100, optimization_level=1, dynamical_decoupling={'enable': True}, resilience_level=0, log_level='DEBUG')
     rng = np.random.default_rng(seed=42)
@@ -125,7 +125,7 @@ if __name__ == "__main__":
         ext = f"GC-{flags.circuit}-{flags.qubits}-{n_parameters}-sampling_{flags.samplings}-epochs_{flags.epochs}-"
         file_names = {"predictions-train": base_output / (ext + f"predictions-train-{flags.name}.csv"), "targets-train": base_output / (ext + f"targets-train-{flags.name}.csv"),
                       "predictions-test": base_output / (ext + f"predictions-test-{flags.name}.csv"), "targets-test": base_output / (ext + f"targets-test-{flags.name}.csv"),
-                      "weights": base_output / (ext + "weights-test")}
+                      "weights": base_output / (ext + "weights")}
         if flags.resume_at_epoch == -1:
             pd.DataFrame(columns=["sampling", "epoch", "prediction"]).to_csv(
                 file_names["predictions-train"], index=False
