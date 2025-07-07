@@ -7,8 +7,9 @@ start_time=$(date +%s)
 #python3 job.py -l 2 -q 8 -n 0 -c "Sn_free_parameter_circuit" -b "/Users/home/qiskit_env/Pennylane/data/graph_connectedness" -d "nodes_8-graphs_3000-edges_8_to_17.pt" -e 100 -s 5
 
 #python3 job.py -l 30 -q 8 -n 27061720 -c "Cn_circuit" -t "Connectedness" -b "/Users/danielles/Documents/Projekte/BAIQO/invariant_circuits/Pennylane_ML/Graph_ML/data/graph_connectedness" -d "nodes_8-graphs_3000.pt" -e 100 -s 10
-python3.10 job.py -l 30 -q 8 -n 29060424 -c "Cn_circuit" -t "Connectedness" -b "/Users/danielle/BAIQO/Pennylane_ML/Graph_ML/data/graph_connectedness" -d "nodes_8-graphs_3000.pt" -e 10 -s 1 -r 0 2>&1 | tee /Users/danielle/BAIQO/Pennylane_ML/Graph_ML/output/console_log_ex_2.txt
-#python3.10 job.py -l 2 -q 8 -n 02071659 -c "Cn_circuit" -t "Connectedness" -b "/Users/danielle/BAIQO/Pennylane_ML/Graph_ML/data/graph_connectedness" -d "nodes_8-graphs_3000.pt" -e 2 -s 1 -r 0 2>&1 | tee /Users/danielle/BAIQO/Pennylane_ML/Graph_ML/output/console_log_test_pennylane_1.txt
+#python3.10 job.py -l 30 -q 8 -n 29060424 -c "Cn_circuit" -t "Connectedness" -b "/Users/danielle/BAIQO/Pennylane_ML/Graph_ML/data/graph_connectedness" -d "nodes_8-graphs_3000.pt" -e 10 -s 1 -r 0 2>&1 | tee /Users/danielle/BAIQO/Pennylane_ML/Graph_ML/output/console_log_ex_2.txt
+#python3.10 job.py -l 30 -q 8 -n 02071659 -c "Cn_circuit" -t "Connectedness" -b "/Users/danielle/BAIQO/Pennylane_ML/Graph_ML/data/graph_connectedness" -d "nodes_8-graphs_3000.pt" -e 2 -s 1 -r 0 2>&1 | tee /Users/danielle/BAIQO/Pennylane_ML/Graph_ML/output/console_log_test_pennylane_1.txt
+python3.10 job.py -l 30 -q 8 -n 07071508 -c "Cn_circuit" -t "Connectedness" -b "/Users/danielles/Documents/Projekte/BAIQO/invariant_circuits/Pennylane_ML/Graph_ML/data/graph_connectedness" -d "nodes_8-graphs_3000.pt" -e 10 -s 1
 
 end_time=$(date +%s)  # Capture end time
 elapsed_time=$((end_time - start_time))  # Compute duration

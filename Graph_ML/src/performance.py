@@ -8,12 +8,15 @@ from sklearn.model_selection import ShuffleSplit
 import numpy as np
 import pandas as pd
 
+from pennylane_qiskit import qiskit_session, RemoteDevice
+
 from .utils import append_to_csv
 
 
 def fit(circuit: qml.QNode,
         circuit_weight_shapes: dict[str, tuple],
         dataset: torch.utils.data.TensorDataset,
+        device: RemoteDevice,
         file_names: dict,
         samplings: int = 30,
         extra_data: torch.Tensor = None,
@@ -23,7 +26,7 @@ def fit(circuit: qml.QNode,
                                    list[tuple[int, int, list[float]]]]:
     
     # We shuffle the dataset
-    subsampling = ShuffleSplit(n_splits=samplings, train_size=10, test_size=2990, random_state=42)
+    subsampling = ShuffleSplit(n_splits=samplings, train_size=100, test_size=2900, random_state=42)
 
     prediction_history: dict[str, list[tuple[int, int, list[float]]]] = {"test": [], "train": []}
     targets: dict[str, list[tuple[int, list[float]]]] = {"test": [], "train": []}
@@ -47,7 +50,7 @@ def fit(circuit: qml.QNode,
 
         x_train, y_train = dataset[train_indices]
         x_test, y_test = dataset[test_indices]
-        x_test, y_test = x_test[:5], y_test[:5]
+        x_test, y_test = x_test[:50], y_test[:50]
 
         
         #targets["train"].append((sampling, y_train.tolist()))
@@ -71,25 +74,27 @@ def fit(circuit: qml.QNode,
         else:
             model.load_state_dict(torch.load(file_names["weights"]))
 
-        optimizer = torch.optim.SGD(model.parameters(), lr=0.08)
+        optimizer = torch.optim.SGD(model.parameters(), lr=0.008)
 
         loss = torch.nn.BCEWithLogitsLoss()
 
         data_loader = torch.utils.data.DataLoader(
-            torch.utils.data.TensorDataset(*dataset[train_indices]), batch_size=25, shuffle=True, drop_last=False,
+            torch.utils.data.TensorDataset(*dataset[train_indices]), batch_size=1, shuffle=True, drop_last=False,
         )
 
         if resume_at == -1:
             model.eval()
             with torch.no_grad():
-                pred_train_before = model(x_train).tolist()
+                with qiskit_session(device, max_time=345600) as session:
+                    pred_train_before = model(x_train).tolist()
                 #prediction_history["train"].append((sampling, 0, pred_train_before))
                 append_to_csv(
                     {"sampling": sampling, "epoch": 0, "prediction": pred_train_before},
                     file_names["predictions-train"],
                     ["sampling", "epoch", "prediction"]
                 )
-                pred_test_before = model(x_test).tolist()
+                with qiskit_session(device, max_time=345600) as session:
+                    pred_test_before = model(x_test).tolist()
                 #prediction_history["test"].append((sampling, 0, pred_test_before))
                 append_to_csv(
                     {"sampling": sampling, "epoch": 0, "prediction": pred_test_before},
@@ -107,18 +112,26 @@ def fit(circuit: qml.QNode,
             #pred_epoch = []
             for xs, ys in data_loader:
                 optimizer.zero_grad()
-                pred_batch = model(xs)
+                print("    Starting forward pass.")
+                with qiskit_session(device, max_time=345600) as session:
+                    pred_batch = model(xs)
                 append_to_csv(
                     {"sampling": sampling, "epoch": epoch + 1, "prediction": pred_batch.tolist()},
                     file_names["predictions-train"],
                     ["sampling", "epoch", "prediction"]
                 )
+                print("    Forward pass done.")
                 #pred_epoch.extend(pred_batch.tolist())
                 loss_evaluated = loss(pred_batch, ys)
-                loss_evaluated.backward()
+                print("    Loss calculated.")
+                with qiskit_session(device, max_time=345600) as session:
+                    loss_evaluated.backward()
+                print("    Backward pass done.")
                 optimizer.step()
+                print("    Optimizer step done.")
                 torch.save(model.state_dict(), file_names["weights"])
-                print("Another batch (25 data points) done.")
+                print("    Model saved.")
+                print("Another batch (25 data points) done.\n\n\n")
 
             #weight_history.append((sampling, epoch, model.state_dict().get("weights").reshape(-1).tolist()))
             #prediction_history["train"].append((sampling, epoch + 1, pred_epoch))
@@ -132,12 +145,14 @@ def fit(circuit: qml.QNode,
 
                 #prediction_history["train"].append((sampling, epoch + 1, model(x_train).tolist()))
                 #prediction_history["test"].append((sampling, epoch + 1, model(x_test).tolist()))
-                test_results = model(x_test)
+                with qiskit_session(device, max_time=345600) as session:
+                    test_results = model(x_test)
                 append_to_csv(
                     {"sampling": sampling, "epoch": epoch + 1, "prediction": test_results.tolist()},
                     file_names["predictions-test"],
                     ["sampling", "epoch", "prediction"]
                 )
+                print("    Test done.\n\n\n")
 
 
                 '''print(f"\nSampling {sampling} | Epoch {epoch + 1}")
