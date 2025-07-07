@@ -131,7 +131,7 @@ def fit(circuit: qml.QNode,
                 print("    Optimizer step done.")
                 torch.save(model.state_dict(), file_names["weights"])
                 print("    Model saved.")
-                print("Another batch (25 data points) done.\n\n\n")
+                print("Another batch (1 data point) done.\n\n\n")
 
             #weight_history.append((sampling, epoch, model.state_dict().get("weights").reshape(-1).tolist()))
             #prediction_history["train"].append((sampling, epoch + 1, pred_epoch))

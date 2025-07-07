@@ -25,7 +25,7 @@ if __name__ == "__main__":
     parser.add_argument("-rl", "--rotationlayers", help="Number of layers with individual rotations", default=0, type=int)
     parser.add_argument("-q", "--qubits", help="Number of qubits", default=3, type=int)
     parser.add_argument("-n", "--name", help="Number to add to filenames to prevent overrides", default=3, type=int)
-    parser.add_argument("-b", "--base", help="Base directory", default= "/Users/danielles/Documents/Projekte/BAIQO/invariant_circuits/Pennylane_ML", type=str) # default="/Users/danielle/BAIQO/Pennylane_ML", type=str)
+    parser.add_argument("-b", "--base", help="Base directory", default="/Users/danielle/BAIQO/Pennylane_ML", type=str)
     parser.add_argument("-c", "--circuit", help="Select circuit to run", default="Sn_circuit")
     parser.add_argument("-t", "--task", help = "Select task to be trained for", default = "Connectedness")
     parser.add_argument("-d", "--data", help="filename for dataset", default="nodes_6-graphs_3000-edges_5_6_7.pt", type=str)
@@ -98,19 +98,19 @@ if __name__ == "__main__":
     # Enable Qiskit Runtime logging
     logging.getLogger('qiskit_ibm_runtime').setLevel(logging.INFO)
 
-    #service = QiskitRuntimeService.save_account(token=TOKEN, instance=CRN, set_as_default=True, overwrite=True)
-    #service = QiskitRuntimeService()
-    #print(service.backends())
-    #ibm_backend = service.backend("ibm_kingston")
-    ibm_backend = FakeTorino()
+    service = QiskitRuntimeService.save_account(token=TOKEN, instance=CRN, set_as_default=True, overwrite=True)
+    service = QiskitRuntimeService()
+    print(service.backends())
+    ibm_backend = service.backend("ibm_kingston")
+    #ibm_backend = FakeTorino()
     #dev = qml.device("default.qubit", wires=flags.qubits)
     dev = qml.device("qiskit.remote", wires=flags.qubits, backend=ibm_backend, seed_transpiler=42, seed_estimator=42, shots=100, optimization_level=1, dynamical_decoupling={'enable': True}, resilience_level=0, log_level='INFO')
     rng = np.random.default_rng(seed=42)
     qnode = qml.QNode(circ, device=dev, interface="torch", diff_method="spsa", gradient_kwargs={'sampler_rng': rng})
 
     base = pathlib.Path(flags.base)
-    #base_output = pathlib.Path("/Users/danielle/BAIQO/Pennylane_ML/Graph_ML/output/connectedness")
-    base_output = pathlib.Path("/Users/danielles/Documents/Projekte/BAIQO/invariant_circuits/Pennylane_ML/Graph_ML/output/connectedness")
+    base_output = pathlib.Path("/Users/danielle/BAIQO/Pennylane_ML/Graph_ML/output/connectedness")
+    #base_output = pathlib.Path("/Users/danielles/Documents/Projekte/BAIQO/invariant_circuits/Pennylane_ML/Graph_ML/output/connectedness")
 
     if flags.task in ["Connectedness", "Bipartiteness", "Connected_plus_Bipartite", "Hamiltonian"]:
         dataset = utils.load_patterns(base / flags.data, flags.qubits)
