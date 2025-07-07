@@ -21,7 +21,8 @@ def fit(circuit: qml.QNode,
         samplings: int = 30,
         extra_data: torch.Tensor = None,
         epochs: int = 50,
-        resume_at: int = -1) -> tuple[dict[str, list[tuple[int, int, list[float]]]],
+        resume_at: int = -1,
+        resume_after_batch: int = -1) -> tuple[dict[str, list[tuple[int, int, list[float]]]],
                                    dict[str, list[tuple[int, list[float]]]],
                                    list[tuple[int, int, list[float]]]]:
     
@@ -110,28 +111,33 @@ def fit(circuit: qml.QNode,
             print("Sampling: ", sampling, "; Epoch: ", epoch)
             model.train()
             #pred_epoch = []
+            batch_done = 0
             for xs, ys in data_loader:
-                optimizer.zero_grad()
-                print("    Starting forward pass.")
-                with qiskit_session(device, max_time=345600) as session:
-                    pred_batch = model(xs)
-                append_to_csv(
-                    {"sampling": sampling, "epoch": epoch + 1, "prediction": pred_batch.tolist()},
-                    file_names["predictions-train"],
-                    ["sampling", "epoch", "prediction"]
-                )
-                print("    Forward pass done.")
-                #pred_epoch.extend(pred_batch.tolist())
-                loss_evaluated = loss(pred_batch, ys)
-                print("    Loss calculated.")
-                with qiskit_session(device, max_time=345600) as session:
-                    loss_evaluated.backward()
-                print("    Backward pass done.")
-                optimizer.step()
-                print("    Optimizer step done.")
-                torch.save(model.state_dict(), file_names["weights"])
-                print("    Model saved.")
-                print("Another batch (25 data points) done.\n\n\n")
+                if epoch == start_epoch and -1 < resume_after_batch and batch_done < resume_after_batch:
+                    batch_done += 1
+                    print(f"Skip batch {batch_done} of starting epoch")
+                else:
+                    optimizer.zero_grad()
+                    print("    Starting forward pass.")
+                    with qiskit_session(device, max_time=345600) as session:
+                        pred_batch = model(xs)
+                    append_to_csv(
+                        {"sampling": sampling, "epoch": epoch + 1, "prediction": pred_batch.tolist()},
+                        file_names["predictions-train"],
+                        ["sampling", "epoch", "prediction"]
+                    )
+                    print("    Forward pass done.")
+                    #pred_epoch.extend(pred_batch.tolist())
+                    loss_evaluated = loss(pred_batch, ys)
+                    print("    Loss calculated.")
+                    with qiskit_session(device, max_time=345600) as session:
+                        loss_evaluated.backward()
+                    print("    Backward pass done.")
+                    optimizer.step()
+                    print("    Optimizer step done.")
+                    torch.save(model.state_dict(), file_names["weights"])
+                    print("    Model saved.")
+                    print("Another batch (25 data points) done.\n\n\n")
 
             #weight_history.append((sampling, epoch, model.state_dict().get("weights").reshape(-1).tolist()))
             #prediction_history["train"].append((sampling, epoch + 1, pred_epoch))
@@ -145,6 +151,7 @@ def fit(circuit: qml.QNode,
 
                 #prediction_history["train"].append((sampling, epoch + 1, model(x_train).tolist()))
                 #prediction_history["test"].append((sampling, epoch + 1, model(x_test).tolist()))
+                print("Start test")
                 with qiskit_session(device, max_time=345600) as session:
                     test_results = model(x_test)
                 append_to_csv(

@@ -3,6 +3,7 @@
 import argparse
 import math
 import pathlib
+import sys
 
 import pandas as pd
 import pennylane as qml
@@ -31,6 +32,7 @@ if __name__ == "__main__":
     parser.add_argument("-d", "--data", help="filename for dataset", default="nodes_6-graphs_3000-edges_5_6_7.pt", type=str)
     parser.add_argument("-e", "--epochs", help="number of epochs", default=50, type=int)
     parser.add_argument("-r", "--resume_at_epoch", help="epoch after which to resume", default=-1, type=int)
+    parser.add_argument("-br", "--resume_after_batch", help="batch after which to resume", default=-1, type=int)
     parser.add_argument("-s", "--samplings", help="number of samplings", default=30, type=int)
 
     flags = parser.parse_args()
@@ -101,23 +103,29 @@ if __name__ == "__main__":
     service = QiskitRuntimeService.save_account(token=TOKEN, instance=CRN, set_as_default=True, overwrite=True)
     service = QiskitRuntimeService()
     print(service.backends())
-    ibm_backend = service.backend("ibm_kingston")
-    #ibm_backend = FakeTorino()
+    #ibm_backend = service.backend("ibm_kingston")
+    ibm_backend = FakeTorino()
     #dev = qml.device("default.qubit", wires=flags.qubits)
     dev = qml.device("qiskit.remote", wires=flags.qubits, backend=ibm_backend, seed_transpiler=42, seed_estimator=42, shots=100, optimization_level=1, dynamical_decoupling={'enable': True}, resilience_level=0, log_level='INFO')
     rng = np.random.default_rng(seed=42)
     qnode = qml.QNode(circ, device=dev, interface="torch", diff_method="spsa", gradient_kwargs={'sampler_rng': rng})
 
     base = pathlib.Path(flags.base)
-    base_output = pathlib.Path("/Users/danielle/BAIQO/Pennylane_ML/Graph_ML/output/connectedness")
-    #base_output = pathlib.Path("/Users/danielles/Documents/Projekte/BAIQO/invariant_circuits/Pennylane_ML/Graph_ML/output/connectedness")
 
-    if flags.task in ["Connectedness", "Bipartiteness", "Connected_plus_Bipartite", "Hamiltonian"]:
-        dataset = utils.load_patterns(base / flags.data, flags.qubits)
+    tasks_1 = ["Connectedness", "Bipartiteness", "Connected_plus_Bipartite", "Hamiltonian"]
+
+    if flags.task in tasks_1:
+        subfolder_names = ["graph_connectedness", "bipartite", "connected_plus_bipartite", "hamiltonian"]
+        dataset = utils.load_patterns(f"{base}/Graph_ML/data/{subfolder_names[tasks_1.index(flags.task)]}/{flags.data}", flags.qubits)
+        if flags.task == "Connectedness":
+            folder = "connectedness"
+        else:
+            sys.exit("No output folder for this task exists yet.")
+        base_output = pathlib.Path(f"{flags.base}/Graph_ML/output/{folder}")
         ext = f"GC-{flags.circuit}-{flags.qubits}-{n_parameters}-sampling_{flags.samplings}-epochs_{flags.epochs}-"
         file_names = {"predictions-train": base_output / (ext + f"predictions-train-{flags.name}.csv"), "targets-train": base_output / (ext + f"targets-train-{flags.name}.csv"),
                       "predictions-test": base_output / (ext + f"predictions-test-{flags.name}.csv"), "targets-test": base_output / (ext + f"targets-test-{flags.name}.csv"),
-                      "weights": base_output / (ext + "weights")}
+                      "weights": base_output / (ext + "weights-test")}
         if flags.resume_at_epoch == -1:
             pd.DataFrame(columns=["sampling", "epoch", "prediction"]).to_csv(
                 file_names["predictions-train"], index=False
@@ -131,7 +139,7 @@ if __name__ == "__main__":
             pd.DataFrame(columns=["sampling", "target"]).to_csv(
                 file_names["targets-test"], index=False
             )
-        predictions, targets, weights = performance.fit(qnode, weight_shapes, dataset, samplings=flags.samplings, epochs=flags.epochs, file_names=file_names, resume_at=flags.resume_at_epoch, device=dev)
+        predictions, targets, weights = performance.fit(qnode, weight_shapes, dataset, samplings=flags.samplings, epochs=flags.epochs, file_names=file_names, resume_at=flags.resume_at_epoch, resume_after_batch=flags.resume_after_batch, device=dev)
         print("Run finished!")
 
         '''
