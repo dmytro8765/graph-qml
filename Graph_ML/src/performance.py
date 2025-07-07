@@ -74,12 +74,12 @@ def fit(circuit: qml.QNode,
         else:
             model.load_state_dict(torch.load(file_names["weights"]))
 
-        optimizer = torch.optim.SGD(model.parameters(), lr=0.008)
+        optimizer = torch.optim.SGD(model.parameters(), lr=0.08)
 
         loss = torch.nn.BCEWithLogitsLoss()
 
         data_loader = torch.utils.data.DataLoader(
-            torch.utils.data.TensorDataset(*dataset[train_indices]), batch_size=1, shuffle=True, drop_last=False,
+            torch.utils.data.TensorDataset(*dataset[train_indices]), batch_size=25, shuffle=True, drop_last=False,
         )
 
         if resume_at == -1:
@@ -131,7 +131,7 @@ def fit(circuit: qml.QNode,
                 print("    Optimizer step done.")
                 torch.save(model.state_dict(), file_names["weights"])
                 print("    Model saved.")
-                print("Another batch (1 data point) done.\n\n\n")
+                print("Another batch (25 data points) done.\n\n\n")
 
             #weight_history.append((sampling, epoch, model.state_dict().get("weights").reshape(-1).tolist()))
             #prediction_history["train"].append((sampling, epoch + 1, pred_epoch))
