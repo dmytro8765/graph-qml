@@ -1,11 +1,12 @@
+# Works with Python 3.10.11
+# pip==23.2.1
 numpy==1.25.0
 matplotlib==3.5.1
-networkx
-numpy
-pandas
-pennylane
-pennylane-qiskit
-scikit-learn
-torch
-qiskit
-qiskit_ibm_runtime
+networkx==3.4.2
+pandas==2.3.1  # or 2.3.0 works as well
+pennylane==0.41.1
+pennylane-qiskit==0.41.0.post0
+scikit-learn==1.7.0
+torch==2.4.1 # or 2.2.2 works as well
+qiskit==1.2.4
+qiskit_ibm_runtime==0.29.0
