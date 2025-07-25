@@ -25,7 +25,7 @@ def fit(circuit: qml.QNode,
         resume_after_batch: int = -1) -> tuple[dict[str, list[tuple[int, int, list[float]]]],
                                    dict[str, list[tuple[int, list[float]]]],
                                    list[tuple[int, int, list[float]]]]:
-    
+
     # We shuffle the dataset
     subsampling = ShuffleSplit(n_splits=samplings, train_size=100, test_size=2900, random_state=42)
 
@@ -56,7 +56,7 @@ def fit(circuit: qml.QNode,
         filenames_weights_this_run = file_names["weights"]
         filename_weights = f"{filenames_weights_this_run}_s_{sampling}"
 
-        
+
         #targets["train"].append((sampling, y_train.tolist()))
         if resume_at == -1:
             append_to_csv(
@@ -206,3 +206,43 @@ def fit(circuit: qml.QNode,
                     #print(f"Test {i+1}: Mean prediction = {(np.sign(pred)+1)/2}, Target = {target}")'''
 
     return prediction_history, targets, weight_history
+
+
+def test(circuit: qml.QNode,
+        circuit_weight_shapes: dict[str, tuple],
+        dataset: torch.utils.data.TensorDataset,
+        device: RemoteDevice,
+        file_names: dict,
+        samplings: int = 10,
+        epoch: int = 50,
+        sample_number: int = 0):
+    # We shuffle the dataset
+    subsampling = ShuffleSplit(n_splits=samplings, train_size=100, test_size=2900, random_state=42)
+
+    for sampling, (train_indices, test_indices) in enumerate(subsampling.split(dataset)):
+        if sampling == sample_number:
+            x_test, y_test = dataset[test_indices]
+            x_test, y_test = x_test[:50], y_test[:50]
+
+            filename_weights = file_names["weights"]
+
+            append_to_csv(
+                {"sampling": sampling, "target": y_test.tolist()},
+                file_names["targets-test"],
+                ["sampling", "target"]
+            )
+
+            model = qml.qnn.TorchLayer(circuit, circuit_weight_shapes)
+            model.load_state_dict(torch.load(filename_weights))
+
+            model.eval()
+            with torch.no_grad():
+                print("Start test")
+                with qiskit_session(device, max_time=345600) as session:
+                    test_results = model(x_test)
+                    append_to_csv(
+                        {"sampling": sampling, "epoch": epoch, "prediction": test_results.tolist()},
+                        file_names["predictions-test"],
+                        ["sampling", "epoch", "prediction"]
+                    )
+                    print("    Test done.\n\n\n")
