@@ -11,7 +11,7 @@ start_time=$(date +%s)
 #python3.10 job.py -l 30 -q 8 -n 29060424 -c "Cn_circuit" -t "Connectedness" -b "/home/schuman/Pennylane_ML" -d "nodes_8-graphs_3000.pt" -e 10 -s 1 -r 0 -br 2 2>&1 | tee /home/schuman/Pennylane_ML/Graph_ML/output/console_log_ex_4.txt
 #python3.10 job.py -l 30 -q 8 -n 07072256 -c "Cn_circuit" -t "Connectedness" -b "/home/schuman/Pennylane_ML" -d "nodes_8-graphs_3000.pt" -e 2 -s 1 -r 0 -br 2 2>&1 | tee /home/schuman/Pennylane_ML/Graph_ML/output/console_log_test.txt
 # python3.10 job.py -l 30 -q 8 -n 07081426 -c "Cn_circuit" -t "Connectedness" -b "/home/schuman/Pennylane_ML" -d "nodes_8-graphs_3000.pt" -e 15 -s 1 2>&1 | tee /home/schuman/Pennylane_ML/Graph_ML/output/console_log_ex_fake_torino.txt
-python3.10 job.py -l 30 -q 8 -n 07221456 -c "Cn_circuit" -t "Connectedness" -b "/Users/danielles/Documents/Projekte/BAIQO/invariant_circuits/Pennylane_ML" -d "nodes_8-graphs_3000.pt" -e 2 -s 1 2>&1 | tee /Users/danielles/Documents/Projekte/BAIQO/invariant_circuits/Pennylane_ML/Graph_ML/output/pennylane_default.txt
+python3.10 job.py -l 30 -q 8 -n 07251045 -c "Cn_circuit" -t "Connectedness" -b "/home/schuman/Pennylane_ML" -d "nodes_8-graphs_3000.pt" -e 50 -s 10 2>&1 | tee /home/schuman/Pennylane_ML/Graph_ML/output/pennylane_reproduction.txt
 
 end_time=$(date +%s)  # Capture end time
 elapsed_time=$((end_time - start_time))  # Compute duration
