@@ -53,6 +53,9 @@ def fit(circuit: qml.QNode,
         x_test, y_test = dataset[test_indices]
         x_test, y_test = x_test[:50], y_test[:50]
 
+        filenames_weights_this_run = file_names["weights"]
+        filename_weights = f"{filenames_weights_this_run}_s_{sampling}"
+
         
         #targets["train"].append((sampling, y_train.tolist()))
         if resume_at == -1:
@@ -71,9 +74,9 @@ def fit(circuit: qml.QNode,
         model = qml.qnn.TorchLayer(circuit, circuit_weight_shapes)
         if init_weights is not None:
             model.load_state_dict(init_weights)
-            torch.save(model.state_dict(), file_names["weights"])
+            torch.save(model.state_dict(), filename_weights)
         else:
-            model.load_state_dict(torch.load(file_names["weights"]))
+            model.load_state_dict(torch.load(filename_weights))
 
         optimizer = torch.optim.SGD(model.parameters(), lr=0.08)
 
@@ -135,7 +138,7 @@ def fit(circuit: qml.QNode,
                     print("    Backward pass done.")
                     optimizer.step()
                     print("    Optimizer step done.")
-                    torch.save(model.state_dict(), file_names["weights"])
+                    torch.save(model.state_dict(), filename_weights)
                     print("    Model saved.")
                     print("Another batch (25 data points) done.\n\n\n")
 
