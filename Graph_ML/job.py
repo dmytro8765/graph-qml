@@ -100,15 +100,17 @@ if __name__ == "__main__":
     # Enable Qiskit Runtime logging
     logging.getLogger('qiskit_ibm_runtime').setLevel(logging.DEBUG)
 
-    service = QiskitRuntimeService.save_account(token=TOKEN, instance=CRN, set_as_default=True, overwrite=True)
-    service = QiskitRuntimeService()
-    print(service.backends())
+    #service = QiskitRuntimeService.save_account(token=TOKEN, instance=CRN, set_as_default=True, overwrite=True)
+    #service = QiskitRuntimeService()
+    #print(service.backends())
     #ibm_backend = service.backend("ibm_kingston")
-    ibm_backend = FakeTorino()
-    #dev = qml.device("default.qubit", wires=flags.qubits)
-    dev = qml.device("qiskit.remote", wires=flags.qubits, backend=ibm_backend, seed_transpiler=42, seed_estimator=42, shots=100, optimization_level=1, dynamical_decoupling={'enable': True}, resilience_level=0, log_level='DEBUG')
+    #ibm_backend = FakeTorino()
+    #ibm_backend = service.backend("ibm_torino")
+    dev = qml.device("default.qubit", wires=flags.qubits)
+    #dev = qml.device("qiskit.remote", wires=flags.qubits, backend=ibm_backend, seed_transpiler=42, seed_estimator=42, shots=100, optimization_level=1, dynamical_decoupling={'enable': True}, resilience_level=0, log_level='DEBUG')
     rng = np.random.default_rng(seed=42)
-    qnode = qml.QNode(circ, device=dev, interface="torch", diff_method="spsa", gradient_kwargs={'sampler_rng': rng})
+    #qnode = qml.QNode(circ, device=dev, interface="torch", diff_method="spsa", gradient_kwargs={'sampler_rng': rng})
+    qnode = qml.QNode(circ, device=dev, interface="torch", gradient_kwargs={'sampler_rng': rng})
 
     base = pathlib.Path(flags.base)
 

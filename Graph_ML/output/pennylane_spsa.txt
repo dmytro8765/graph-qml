@@ -1,0 +1,95 @@
+Number of parameters:  90
+Sampling:  0 ; Epoch:  0
+    Starting forward pass.
+    Forward pass done.
+    Loss calculated.
+    Backward pass done.
+    Optimizer step done.
+    Model saved.
+Another batch (25 data points) done.
+
+
+
+    Starting forward pass.
+    Forward pass done.
+    Loss calculated.
+    Backward pass done.
+    Optimizer step done.
+    Model saved.
+Another batch (25 data points) done.
+
+
+
+    Starting forward pass.
+    Forward pass done.
+    Loss calculated.
+    Backward pass done.
+    Optimizer step done.
+    Model saved.
+Another batch (25 data points) done.
+
+
+
+    Starting forward pass.
+    Forward pass done.
+    Loss calculated.
+    Backward pass done.
+    Optimizer step done.
+    Model saved.
+Another batch (25 data points) done.
+
+
+
+Start test
+    Test done.
+
+
+
+Sampling:  0 ; Epoch:  1
+    Starting forward pass.
+    Forward pass done.
+    Loss calculated.
+    Backward pass done.
+    Optimizer step done.
+    Model saved.
+Another batch (25 data points) done.
+
+
+
+    Starting forward pass.
+    Forward pass done.
+    Loss calculated.
+    Backward pass done.
+    Optimizer step done.
+    Model saved.
+Another batch (25 data points) done.
+
+
+
+    Starting forward pass.
+    Forward pass done.
+    Loss calculated.
+    Backward pass done.
+    Optimizer step done.
+    Model saved.
+Another batch (25 data points) done.
+
+
+
+    Starting forward pass.
+    Forward pass done.
+    Loss calculated.
+    Backward pass done.
+    Optimizer step done.
+    Model saved.
+Another batch (25 data points) done.
+
+
+
+Start test
+    Test done.
+
+
+
+Run finished!
+Epochs flag:  2

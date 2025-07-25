@@ -86,16 +86,16 @@ def fit(circuit: qml.QNode,
         if resume_at == -1:
             model.eval()
             with torch.no_grad():
-                with qiskit_session(device, max_time=345600) as session:
-                    pred_train_before = model(x_train).tolist()
+                #with qiskit_session(device, max_time=345600) as session:
+                pred_train_before = model(x_train).tolist()
                 #prediction_history["train"].append((sampling, 0, pred_train_before))
                 append_to_csv(
                     {"sampling": sampling, "epoch": 0, "prediction": pred_train_before},
                     file_names["predictions-train"],
                     ["sampling", "epoch", "prediction"]
                 )
-                with qiskit_session(device, max_time=345600) as session:
-                    pred_test_before = model(x_test).tolist()
+                #with qiskit_session(device, max_time=345600) as session:
+                pred_test_before = model(x_test).tolist()
                 #prediction_history["test"].append((sampling, 0, pred_test_before))
                 append_to_csv(
                     {"sampling": sampling, "epoch": 0, "prediction": pred_test_before},
@@ -119,8 +119,8 @@ def fit(circuit: qml.QNode,
                 else:
                     optimizer.zero_grad()
                     print("    Starting forward pass.")
-                    with qiskit_session(device, max_time=345600) as session:
-                        pred_batch = model(xs)
+                    #with qiskit_session(device, max_time=345600) as session:
+                    pred_batch = model(xs)
                     append_to_csv(
                         {"sampling": sampling, "epoch": epoch + 1, "prediction": pred_batch.tolist()},
                         file_names["predictions-train"],
@@ -130,8 +130,8 @@ def fit(circuit: qml.QNode,
                     #pred_epoch.extend(pred_batch.tolist())
                     loss_evaluated = loss(pred_batch, ys)
                     print("    Loss calculated.")
-                    with qiskit_session(device, max_time=345600) as session:
-                        loss_evaluated.backward()
+                    #with qiskit_session(device, max_time=345600) as session:
+                    loss_evaluated.backward()
                     print("    Backward pass done.")
                     optimizer.step()
                     print("    Optimizer step done.")
@@ -152,8 +152,8 @@ def fit(circuit: qml.QNode,
                 #prediction_history["train"].append((sampling, epoch + 1, model(x_train).tolist()))
                 #prediction_history["test"].append((sampling, epoch + 1, model(x_test).tolist()))
                 print("Start test")
-                with qiskit_session(device, max_time=345600) as session:
-                    test_results = model(x_test)
+                #with qiskit_session(device, max_time=345600) as session:
+                test_results = model(x_test)
                 append_to_csv(
                     {"sampling": sampling, "epoch": epoch + 1, "prediction": test_results.tolist()},
                     file_names["predictions-test"],
