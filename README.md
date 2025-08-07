@@ -2,6 +2,9 @@
 
 In this repository, we conduct a training process of neural networks that have various quantum circuits as their basis, in attempt to solve famous graph problems. 
 
+## Detailed manual 📖
+In the works... ⌛
+
 ## Enviroment ⚙️
 - Python 3.12.2 🐍
 - Install requirements:
@@ -45,5 +48,3 @@ To execute the entire process of training and to compute and plot the accuracy d
 ```setup
 python3 sh script.sh
 ```
-## Detailed manual 📖
-In the works... ⌛
