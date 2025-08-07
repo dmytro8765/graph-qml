@@ -1,9 +1,11 @@
 # Solving graph problems with Quantum Machine Learning
+Welcome!
 
 In this repository, we conduct a training process of neural networks that have various quantum circuits as their basis, in attempt to solve famous graph problems. 
 
 ## Detailed manual 📖
 In the works... ⌛
+In the meantime, for subgraph-related files (and some others): see the comment at the top of each said file for brief description of the contents.
 
 ## Enviroment ⚙️
 - Python 3.12.2 🐍
