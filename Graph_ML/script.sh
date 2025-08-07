@@ -1,3 +1,13 @@
+""" 
+This shell script executes a series of quantum circuit training jobs using different configurations, 
+primarily targeting subgraph classification tasks. 
+
+It measures total execution time, allowing batch processing and benchmarking across 
+various circuit setups and dataset variations.
+
+Additional commented commands support other tasks like clique detection with different circuit templates.
+"""
+
 start_time=$(date +%s)
 
 python3 job.py -l 4 -q 6 -sub 4 -n 0 -c "1" -t "Subgraph" -b "/Users/home/Quantum_Computing/Pennylane/Graph_ML/data/subgraph" -d "graph-6_subgraph-4_3000.pt" -e 10 -s 3

@@ -1,3 +1,13 @@
+"""
+This script contains commands used to launch experiments 
+for various quantum circuit architectures on subgraph isomorphism tasks. 
+
+Each command sets specific hyperparameters to achieve a target number of trainable parameters 
+(e.g., 15, 30, 60, 90, 120), enabling systematic benchmarking. 
+
+The final command summarizes the results across all circuits for analysis.
+"""
+
 # Parameter count targets: 15, 30, 60, 90, 120.
 # 15 -> layers: 4, 4, 4, 2, 2, 2, 5, 5, 5
 # 30 -> layers: 7, 7, 7, 5, 5, 5, 10, 10, 10

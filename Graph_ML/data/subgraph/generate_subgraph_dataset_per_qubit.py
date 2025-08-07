@@ -1,8 +1,17 @@
+"""
+Generate a dataset, whose targets DO NOT respect possible isomorphisms.
+
+Create main graphs and subgraphs, such that:
+- 50% -> subgraph is contained in the big graph;
+- 50% -> subgraph is not contained.
+
+Label for each node: 1, if contained in the found subgraph, 0 otherwise.
+"""
+
 import networkx as nx
 import numpy as np
 import torch
 import random
-import matplotlib.pyplot as plt
 
 dataset = []
 num_samples = 3000

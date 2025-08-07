@@ -1,3 +1,20 @@
+"""
+Train a parameterized quantum neural network circuit,
+using Pennylane and PyTorch on subsampled dataset splits.
+
+The function performs multiple random train/test splits (controlled by `samplings`),
+initializing the model weights and optimizer for each split.
+
+It preprocesses target labels by averaging over isomorphic configurations, then trains the model
+for a given number of epochs while logging loss and predictions using Weights & Biases (wandb).
+
+Predict: is given subgraph contained in the main graph
+(main difference to "performance_subgraph_per_qubit.py", where one predicts for each node separately).
+
+Returns dictionaries containing prediction histories and target values for both train and test sets,
+as well as weight history for further analysis or debugging.
+"""
+
 import collections
 import pennylane as qml
 import torch

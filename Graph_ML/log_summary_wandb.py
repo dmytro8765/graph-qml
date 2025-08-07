@@ -1,3 +1,14 @@
+"""
+Script for evaluating and visualizing prediction accuracy from quantum circuit experiments.
+
+Generates accuracy plots for different circuit configurations,
+with support for standard, per-qubit, and isomorphism-aware evaluation modes.
+
+Also logs results to Weights & Biases (WandB) for experiment tracking and comparison.
+
+Intended to be run after model training to assess performance across various experimental setups.
+"""
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd

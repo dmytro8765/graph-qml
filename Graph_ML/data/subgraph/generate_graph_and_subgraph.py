@@ -1,3 +1,13 @@
+"""
+Generate a dataset, whose targets DO NOT respect possible isomorphisms.
+
+Create main graphs and subgraphs, such that:
+- 50% -> subgraph is contained in the big graph;
+- 50% -> subgraph is not contained.
+
+Labels: 1 for contained, 0 for not contained. (1 label per graph).
+"""
+
 import networkx as nx
 import numpy as np
 import torch

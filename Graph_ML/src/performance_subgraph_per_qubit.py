@@ -1,14 +1,17 @@
 """
-Function for training a neural network, solving a subgraph problem.
+Train a parameterized quantum neural network circuit,
+using Pennylane and PyTorch on subsampled dataset splits.
 
-Input: set of graphs, subgraphs, targets
+The function performs multiple random train/test splits (controlled by `samplings`),
+initializing the model weights and optimizer for each split.
 
-Targets in the input: consider the possibility of a subgraph
-being found in the main graph in multiple places!
+It preprocesses target labels by averaging over isomorphic configurations, then trains the model
+for a given number of epochs while logging loss and predictions using Weights & Biases (wandb).
 
-Loss: compare output of the network with average value for each node over a target list.
+Predict a value for each node of the graph separately.
 
-Log in WandB!
+Returns dictionaries containing prediction histories and target values for both train and test sets,
+as well as weight history for further analysis or debugging.
 """
 
 import collections

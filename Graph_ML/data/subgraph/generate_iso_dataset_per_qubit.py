@@ -1,5 +1,5 @@
 """
-Generate a dataset, whose targets respect possible isomorphism.
+Generate a dataset, whose targets respect possible isomorphisms.
 
 Create main graphs and subgraphs, such that:
 - 50% -> subgraph is contained in the big graph

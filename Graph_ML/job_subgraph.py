@@ -1,4 +1,15 @@
-"""Main file used to run experiments and save the results."""
+"""
+Quantum Subgraph Identification Training Script
+
+Main file used to run experiments using parameterized quantum circuits (PQC) for subgraph detection tasks.
+
+Allows configuration of circuit architecture, subgraph size, training parameters, and dataset input.
+
+Handles both standard and per-qubit evaluation modes,
+saves predictions and targets as CSVs for further analysis.
+
+To run: python job_subgraph.py --circuit <name> --task <task_name> --data <dataset.pt> ...
+"""
 
 import argparse
 import math

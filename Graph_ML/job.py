@@ -1,4 +1,16 @@
-"""Main file used to run experiments and save the results."""
+"""
+Main execution script for training quantum machine learning models on various graph-based tasks.
+
+This script parses command-line arguments to configure the quantum circuit,
+dataset and training parameters.
+
+It supports multiple tasks like Graph Connectedness, Clique Detection, and Max-Cut,
+and dynamically selects the appropriate circuit and training pipeline.
+
+Output predictions and targets are saved as CSV files for further analysis.
+
+To run: python job.py --circuit <name> --task <task_name> --data <dataset.pt> ...
+"""
 
 import argparse
 import math

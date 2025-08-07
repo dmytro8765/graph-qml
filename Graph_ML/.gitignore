@@ -7,3 +7,4 @@ qc_venv/
 .DS_Store
 *.pyc
 __pycache__/
+data/plots/
