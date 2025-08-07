@@ -3,6 +3,13 @@ Welcome!
 
 In this repository, we conduct a training process of neural networks that have various quantum circuits as their basis, in attempt to solve famous graph problems. 
 
+For more detail, see following papers:
+
+[Analysis of quantum neural network performance via edge cases](https://arxiv.org/abs/2506.12427)
+[Clique detection using symmetry-restricted quantum circuits](https://arxiv.org/abs/2506.03339)
+[Solving graph problems using permutation-invariant quantum machine learning](https://arxiv.org/abs/2505.12764)
+
+
 ## Detailed manual 📖
 In the works... ⌛
 In the meantime, for subgraph-related files (and some others): see the comment at the top of each said file for brief description of the contents.
