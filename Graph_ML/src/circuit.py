@@ -943,14 +943,80 @@ def subgraph_circuit(inputs: torch.Tensor, weights_strongly_entangled: torch.Ten
 
     return [qml.expval(gate_prod(qml.Z(i)) for i in range(num_qubits))] 
 
-def subgraph_other_circuit(inputs: torch.Tensor, weights_sn: torch.Tensor) -> torch.Tensor:
+def subgraph_other_circuit_app1(inputs: torch.Tensor, weights_sn: torch.Tensor) -> torch.Tensor:
+
+    # Approach 1: 1 + 1+ 2 = 4 trainable parameters.
+    #   - X, Y layers: common;
+    #   - Sn layer: split;
+    #   - inverse graph state layer: absent.
 
     main_num_qubits = 6
     sub_num_qubits = 4
 
     graph_state(inputs, main_num_qubits + sub_num_qubits)
 
-    # Approach 1: Two separate Sn blocks, one on the main graph, one on the subgraph.
+    if weights_sn.ndim != 2 or weights_sn.shape[1] != 4:
+        weights_shape = "(num_layers, 4)"
+        raise WeightsShapeError(weights_shape)
+    
+    num_layers, _ = weights_sn.shape
+
+    for layer_index in range(num_layers):
+        Sn_X_layer(weight=weights_sn[layer_index, 0], num_qubits=main_num_qubits+sub_num_qubits)
+        Sn_Y_layer(weight=weights_sn[layer_index, 1], num_qubits=main_num_qubits+sub_num_qubits)
+        Sn_ZZ_layer(weight=weights_sn[layer_index, 2], num_qubits=main_num_qubits)
+
+        for i in range(sub_num_qubits - 1): # apply same Sn block to subgraph qubits
+            j = i
+            while j < sub_num_qubits - 1:
+                qml.CNOT(wires=[main_num_qubits + i, main_num_qubits + j + 1])
+                qml.RZ(weights_sn[layer_index, 3], wires=main_num_qubits + j + 1)
+                qml.CNOT(wires=[main_num_qubits + i, main_num_qubits + j + 1])
+                j += 1
+
+    return qml.expval(gate_prod(qml.Z(index) for index in range(main_num_qubits))) # 1 output based on main nodes measurements
+
+def subgraph_other_circuit_app1_per_qubit(inputs: torch.Tensor, weights_sn: torch.Tensor) -> torch.Tensor:
+
+    main_num_qubits = 6
+    sub_num_qubits = 4
+
+    graph_state(inputs, main_num_qubits + sub_num_qubits)
+
+    if weights_sn.ndim != 2 or weights_sn.shape[1] != 4:
+        weights_shape = "(num_layers, 4)"
+        raise WeightsShapeError(weights_shape)
+    
+    num_layers, _ = weights_sn.shape
+
+    for layer_index in range(num_layers):
+        Sn_X_layer(weight=weights_sn[layer_index, 0], num_qubits=main_num_qubits+sub_num_qubits)
+        Sn_Y_layer(weight=weights_sn[layer_index, 1], num_qubits=main_num_qubits+sub_num_qubits)
+        Sn_ZZ_layer(weight=weights_sn[layer_index, 2], num_qubits=main_num_qubits)
+
+        for i in range(sub_num_qubits - 1): # apply same Sn block to subgraph qubits
+            j = i
+            while j < sub_num_qubits - 1:
+                qml.CNOT(wires=[main_num_qubits + i, main_num_qubits + j + 1])
+                qml.RZ(weights_sn[layer_index, 3], wires=main_num_qubits + j + 1)
+                qml.CNOT(wires=[main_num_qubits + i, main_num_qubits + j + 1])
+                j += 1
+
+    return [qml.expval(qml.Z(i)) for i in range(main_num_qubits)] # per qubit
+
+def subgraph_other_circuit_app2(inputs: torch.Tensor, weights_sn: torch.Tensor) -> torch.Tensor:
+
+    # Approach 2: 1 + 1 + 2 = 4 trainable parameters.
+    #   - X, Y layers: common;
+    #   - Sn layer: split;
+    #   - inverse graph state layer: fixed, outside of the layers.
+
+    main_num_qubits = 6
+    sub_num_qubits = 4
+    num_qubits = main_num_qubits+sub_num_qubits
+
+    graph_state(inputs, main_num_qubits + sub_num_qubits)
+
     if weights_sn.ndim != 2 or weights_sn.shape[1] != 4:
         weights_shape = "(num_layers, 4)"
         raise WeightsShapeError(weights_shape)
@@ -968,10 +1034,625 @@ def subgraph_other_circuit(inputs: torch.Tensor, weights_sn: torch.Tensor) -> to
                 qml.RZ(weights_sn[layer_index, 3], wires=main_num_qubits + j + 1)
                 qml.CNOT(wires=[main_num_qubits + i, main_num_qubits + j + 1])
                 j += 1
-    
-    # Approach 2: 
+
+    if inputs.ndim == NON_BATCHED_INPUT:
+        inputs = inputs.reshape(1, num_qubits, num_qubits)
+    elif inputs.ndim == BATCHED_INPUT: # batched input
+        inputs = inputs.reshape(inputs.shape[0], num_qubits, num_qubits)
+    else:
+        msg = "Inputs are expected to be of size (num_batches, num_nodes*num_nodes) or (num_nodes*num_nodes,)."
+        raise ValueError(msg)
+
+    for i, j in combinations(range(num_qubits), 2):
+        # We get I for inputs[a, i, j] = 0 and CZ for inputs[a, i, j] = 1 where
+        # inputs[a] is the adjecency matrix for the a'th input graph
+        qml.ControlledPhaseShift(np.pi*((1+inputs[:, i, j])%2), wires=[i, j])
 
     return qml.expval(gate_prod(qml.Z(index) for index in range(main_num_qubits))) # 1 output based on main nodes measurements
+
+def subgraph_other_circuit_app2_per_qubit(inputs: torch.Tensor, weights_sn: torch.Tensor) -> torch.Tensor:
+
+    main_num_qubits = 6
+    sub_num_qubits = 4
+    num_qubits = main_num_qubits+sub_num_qubits
+
+    graph_state(inputs, main_num_qubits + sub_num_qubits)
+
+    if weights_sn.ndim != 2 or weights_sn.shape[1] != 4:
+        weights_shape = "(num_layers, 4)"
+        raise WeightsShapeError(weights_shape)
+    
+    num_layers, _ = weights_sn.shape
+
+    for layer_index in range(num_layers):
+        Sn_X_layer(weight=weights_sn[layer_index, 0], num_qubits=main_num_qubits+sub_num_qubits)
+        Sn_Y_layer(weight=weights_sn[layer_index, 1], num_qubits=main_num_qubits+sub_num_qubits)
+        Sn_ZZ_layer(weight=weights_sn[layer_index, 2], num_qubits=main_num_qubits)
+        for i in range(sub_num_qubits - 1): # apply same Sn block to subgraph qubits
+            j = i
+            while j < sub_num_qubits - 1:
+                qml.CNOT(wires=[main_num_qubits + i, main_num_qubits + j + 1])
+                qml.RZ(weights_sn[layer_index, 3], wires=main_num_qubits + j + 1)
+                qml.CNOT(wires=[main_num_qubits + i, main_num_qubits + j + 1])
+                j += 1
+
+    if inputs.ndim == NON_BATCHED_INPUT:
+        inputs = inputs.reshape(1, num_qubits, num_qubits)
+    elif inputs.ndim == BATCHED_INPUT: # batched input
+        inputs = inputs.reshape(inputs.shape[0], num_qubits, num_qubits)
+    else:
+        msg = "Inputs are expected to be of size (num_batches, num_nodes*num_nodes) or (num_nodes*num_nodes,)."
+        raise ValueError(msg)
+
+    for i, j in combinations(range(num_qubits), 2):
+        # We get I for inputs[a, i, j] = 0 and CZ for inputs[a, i, j] = 1 where
+        # inputs[a] is the adjecency matrix for the a'th input graph
+        qml.ControlledPhaseShift(np.pi*((1+inputs[:, i, j])%2), wires=[i, j])
+
+    return [qml.expval(qml.Z(i)) for i in range(main_num_qubits)] # per qubit
+
+def subgraph_other_circuit_app3(inputs: torch.Tensor, weights_sn: torch.Tensor, weights_ent: torch.Tensor) -> torch.Tensor:
+
+    # Approach 3: 
+    #   - X, Y layers: common, 2 parameters;
+    #   - Sn layer: split, 2 parameters;
+    #   - inverse graph state layer: 1 trainable parameter, outside the layers (hence, weights_ent).
+
+    main_num_qubits = 6
+    sub_num_qubits = 4
+    num_qubits = main_num_qubits + sub_num_qubits
+
+    graph_state(inputs, num_qubits)
+
+    if weights_sn.ndim != 2 or weights_sn.shape[1] != 4: # (later: add an error for weights_ent shape)
+        weights_shape = "(num_layers, 4) + 1"
+        raise WeightsShapeError(weights_shape)
+    
+    num_layers, _ = weights_sn.shape
+
+    for layer_index in range(num_layers):
+        Sn_X_layer(weight=weights_sn[layer_index, 0], num_qubits=num_qubits)
+        Sn_Y_layer(weight=weights_sn[layer_index, 1], num_qubits=num_qubits)
+        Sn_ZZ_layer(weight=weights_sn[layer_index, 2], num_qubits=main_num_qubits)
+        for i in range(sub_num_qubits - 1): # apply same Sn block to subgraph qubits
+            j = i
+            while j < sub_num_qubits - 1:
+                qml.CNOT(wires=[main_num_qubits + i, main_num_qubits + j + 1])
+                qml.RZ(weights_sn[layer_index, 3], wires=main_num_qubits + j + 1)
+                qml.CNOT(wires=[main_num_qubits + i, main_num_qubits + j + 1])
+                j += 1
+         
+    for i, j in combinations(range(num_qubits), 2):
+        qml.ControlledPhaseShift(weights_ent[0], wires=[i, j]) # 5th trainable parameter here (same across all wires)
+
+
+    '''if inputs.ndim == NON_BATCHED_INPUT:
+        inputs = inputs.reshape(1, num_qubits, num_qubits)
+    elif inputs.ndim == BATCHED_INPUT: # batched input
+        inputs = inputs.reshape(inputs.shape[0], num_qubits, num_qubits)
+    else:
+        msg = "Inputs are expected to be of size (num_batches, num_nodes*num_nodes) or (num_nodes*num_nodes,)."
+        raise ValueError(msg)'''
+
+    return qml.expval(gate_prod(qml.Z(index) for index in range(main_num_qubits))) # single output based on main graph nodes measurements
+
+def subgraph_other_circuit_app3_per_qubit(inputs: torch.Tensor, weights_sn: torch.Tensor, weights_ent: torch.Tensor) -> torch.Tensor:
+
+    main_num_qubits = 6
+    sub_num_qubits = 4
+    num_qubits = main_num_qubits + sub_num_qubits
+
+    graph_state(inputs, num_qubits)
+
+    if weights_sn.ndim != 2 or weights_sn.shape[1] != 4: # (later: add an error for weights_ent shape)
+        weights_shape = "(num_layers, 4) + 1"
+        raise WeightsShapeError(weights_shape)
+    
+    num_layers, _ = weights_sn.shape
+
+    for layer_index in range(num_layers):
+        Sn_X_layer(weight=weights_sn[layer_index, 0], num_qubits=num_qubits)
+        Sn_Y_layer(weight=weights_sn[layer_index, 1], num_qubits=num_qubits)
+        Sn_ZZ_layer(weight=weights_sn[layer_index, 2], num_qubits=main_num_qubits)
+        for i in range(sub_num_qubits - 1): # apply same Sn block to subgraph qubits
+            j = i
+            while j < sub_num_qubits - 1:
+                qml.CNOT(wires=[main_num_qubits + i, main_num_qubits + j + 1])
+                qml.RZ(weights_sn[layer_index, 3], wires=main_num_qubits + j + 1)
+                qml.CNOT(wires=[main_num_qubits + i, main_num_qubits + j + 1])
+                j += 1
+         
+    for i, j in combinations(range(num_qubits), 2):
+        qml.ControlledPhaseShift(weights_ent[0], wires=[i, j]) # 5th trainable parameter here (same across all wires)
+
+
+    '''if inputs.ndim == NON_BATCHED_INPUT:
+        inputs = inputs.reshape(1, num_qubits, num_qubits)
+    elif inputs.ndim == BATCHED_INPUT: # batched input
+        inputs = inputs.reshape(inputs.shape[0], num_qubits, num_qubits)
+    else:
+        msg = "Inputs are expected to be of size (num_batches, num_nodes*num_nodes) or (num_nodes*num_nodes,)."
+        raise ValueError(msg)'''
+
+    return [qml.expval(qml.Z(i)) for i in range(main_num_qubits)] # per qubit
+
+def subgraph_other_circuit_app4(inputs: torch.Tensor, weights_sn: torch.Tensor) -> torch.Tensor:
+
+    # Approach 4:
+    #   - X, Y layers: split, weights[0, 1], weights[2, 3];
+    #   - Sn layer: split, weights[4, 5];
+    #   - inverse graph state layer: absent.
+
+    main_num_qubits = 6
+    sub_num_qubits = 4
+    num_qubits = main_num_qubits + sub_num_qubits
+
+    graph_state(inputs, main_num_qubits + sub_num_qubits)
+
+    if weights_sn.ndim != 2 or weights_sn.shape[1] != 6:
+        weights_shape = "(num_layers, 6)"
+        raise WeightsShapeError(weights_shape)
+    
+    num_layers, _ = weights_sn.shape
+
+    for layer_index in range(num_layers):
+        Sn_X_layer(weight=weights_sn[layer_index, 0], num_qubits=main_num_qubits)
+        Sn_Y_layer(weight=weights_sn[layer_index, 2], num_qubits=main_num_qubits)
+        Sn_ZZ_layer(weight=weights_sn[layer_index, 4], num_qubits=main_num_qubits)
+
+        for i in range(sub_num_qubits - 1): # apply X, Y gates to the subgraph qubits
+                qml.RX(weights_sn[layer_index, 1], wires=main_num_qubits+i+1)
+                qml.RY(weights_sn[layer_index, 1], wires=main_num_qubits+i+1)
+
+        for i in range(sub_num_qubits - 1): # apply same Sn block to subgraph qubits
+            j = i
+            while j < sub_num_qubits - 1:
+                qml.CNOT(wires=[main_num_qubits+i, main_num_qubits+j+1])
+                qml.RZ(weights_sn[layer_index, 5], wires=main_num_qubits+j+1)
+                qml.CNOT(wires=[main_num_qubits+i, main_num_qubits+j+1])
+                j += 1
+
+    return qml.expval(gate_prod(qml.Z(index) for index in range(main_num_qubits))) # 1 output based on main nodes measurements
+
+def subgraph_other_circuit_app4_per_qubit(inputs: torch.Tensor, weights_sn: torch.Tensor) -> torch.Tensor:
+
+    main_num_qubits = 6
+    sub_num_qubits = 4
+    num_qubits = main_num_qubits + sub_num_qubits
+
+    graph_state(inputs, main_num_qubits + sub_num_qubits)
+
+    if weights_sn.ndim != 2 or weights_sn.shape[1] != 6:
+        weights_shape = "(num_layers, 6)"
+        raise WeightsShapeError(weights_shape)
+    
+    num_layers, _ = weights_sn.shape
+
+    for layer_index in range(num_layers):
+        Sn_X_layer(weight=weights_sn[layer_index, 0], num_qubits=main_num_qubits)
+        Sn_Y_layer(weight=weights_sn[layer_index, 2], num_qubits=main_num_qubits)
+        Sn_ZZ_layer(weight=weights_sn[layer_index, 4], num_qubits=main_num_qubits)
+
+        for i in range(sub_num_qubits - 1): # apply X, Y gates to the subgraph qubits
+                qml.RX(weights_sn[layer_index, 1], wires=main_num_qubits+i+1)
+                qml.RY(weights_sn[layer_index, 1], wires=main_num_qubits+i+1)
+
+        for i in range(sub_num_qubits - 1): # apply same Sn block to subgraph qubits
+            j = i
+            while j < sub_num_qubits - 1:
+                qml.CNOT(wires=[main_num_qubits+i, main_num_qubits+j+1])
+                qml.RZ(weights_sn[layer_index, 5], wires=main_num_qubits+j+1)
+                qml.CNOT(wires=[main_num_qubits+i, main_num_qubits+j+1])
+                j += 1
+
+    return [qml.expval(qml.Z(i)) for i in range(main_num_qubits)] # per qubit
+
+def subgraph_other_circuit_app5(inputs: torch.Tensor, weights_sn: torch.Tensor) -> torch.Tensor:
+
+    # Approach 5:
+    #   - X, Y layers: split;
+    #   - Sn layer: split
+    #   - inverse graph state layer: fixed.
+
+    main_num_qubits = 6
+    sub_num_qubits = 4
+    num_qubits = main_num_qubits+sub_num_qubits
+
+    graph_state(inputs, main_num_qubits + sub_num_qubits)
+
+    if weights_sn.ndim != 2 or weights_sn.shape[1] != 6:
+        weights_shape = "(num_layers, 6)"
+        raise WeightsShapeError(weights_shape)
+    
+    num_layers, _ = weights_sn.shape
+
+    for layer_index in range(num_layers):
+        Sn_X_layer(weight=weights_sn[layer_index, 0], num_qubits=main_num_qubits)
+        Sn_Y_layer(weight=weights_sn[layer_index, 2], num_qubits=main_num_qubits)
+        Sn_ZZ_layer(weight=weights_sn[layer_index, 4], num_qubits=main_num_qubits)
+
+        for i in range(sub_num_qubits - 1): # apply X, Y gates to the subgraph qubits
+                qml.RX(weights_sn[layer_index, 1], wires=main_num_qubits+i+1)
+                qml.RY(weights_sn[layer_index, 1], wires=main_num_qubits+i+1)
+
+        for i in range(sub_num_qubits - 1): # apply same Sn block to subgraph qubits
+            j = i
+            while j < sub_num_qubits - 1:
+                qml.CNOT(wires=[main_num_qubits+i, main_num_qubits+j+1])
+                qml.RZ(weights_sn[layer_index, 5], wires=main_num_qubits+j+1)
+                qml.CNOT(wires=[main_num_qubits+i, main_num_qubits+j+1])
+                j += 1
+
+    if inputs.ndim == NON_BATCHED_INPUT:
+        inputs = inputs.reshape(1, num_qubits, num_qubits)
+    elif inputs.ndim == BATCHED_INPUT: # batched input
+        inputs = inputs.reshape(inputs.shape[0], num_qubits, num_qubits)
+    else:
+        msg = "Inputs are expected to be of size (num_batches, num_nodes*num_nodes) or (num_nodes*num_nodes,)."
+        raise ValueError(msg)
+
+    for i, j in combinations(range(num_qubits), 2):
+        # We get I for inputs[a, i, j] = 0 and CZ for inputs[a, i, j] = 1 where
+        # inputs[a] is the adjecency matrix for the a'th input graph
+        qml.ControlledPhaseShift(np.pi*((1+inputs[:, i, j])%2), wires=[i, j])
+
+    return qml.expval(gate_prod(qml.Z(index) for index in range(main_num_qubits))) # 1 output based on main nodes measurements
+
+def subgraph_other_circuit_app5_per_qubit(inputs: torch.Tensor, weights_sn: torch.Tensor) -> torch.Tensor:
+
+    main_num_qubits = 6
+    sub_num_qubits = 4
+    num_qubits = main_num_qubits+sub_num_qubits
+
+    graph_state(inputs, main_num_qubits + sub_num_qubits)
+
+    if weights_sn.ndim != 2 or weights_sn.shape[1] != 6:
+        weights_shape = "(num_layers, 6)"
+        raise WeightsShapeError(weights_shape)
+    
+    num_layers, _ = weights_sn.shape
+
+    for layer_index in range(num_layers):
+        Sn_X_layer(weight=weights_sn[layer_index, 0], num_qubits=main_num_qubits)
+        Sn_Y_layer(weight=weights_sn[layer_index, 2], num_qubits=main_num_qubits)
+        Sn_ZZ_layer(weight=weights_sn[layer_index, 4], num_qubits=main_num_qubits)
+
+        for i in range(sub_num_qubits - 1): # apply X, Y gates to the subgraph qubits
+                qml.RX(weights_sn[layer_index, 1], wires=main_num_qubits+i+1)
+                qml.RY(weights_sn[layer_index, 1], wires=main_num_qubits+i+1)
+
+        for i in range(sub_num_qubits - 1): # apply same Sn block to subgraph qubits
+            j = i
+            while j < sub_num_qubits - 1:
+                qml.CNOT(wires=[main_num_qubits+i, main_num_qubits+j+1])
+                qml.RZ(weights_sn[layer_index, 5], wires=main_num_qubits+j+1)
+                qml.CNOT(wires=[main_num_qubits+i, main_num_qubits+j+1])
+                j += 1
+
+    if inputs.ndim == NON_BATCHED_INPUT:
+        inputs = inputs.reshape(1, num_qubits, num_qubits)
+    elif inputs.ndim == BATCHED_INPUT: # batched input
+        inputs = inputs.reshape(inputs.shape[0], num_qubits, num_qubits)
+    else:
+        msg = "Inputs are expected to be of size (num_batches, num_nodes*num_nodes) or (num_nodes*num_nodes,)."
+        raise ValueError(msg)
+
+    for i, j in combinations(range(num_qubits), 2):
+        # We get I for inputs[a, i, j] = 0 and CZ for inputs[a, i, j] = 1 where
+        # inputs[a] is the adjecency matrix for the a'th input graph
+        qml.ControlledPhaseShift(np.pi*((1+inputs[:, i, j])%2), wires=[i, j])
+
+    return [qml.expval(qml.Z(i)) for i in range(main_num_qubits)] # per qubit
+
+def subgraph_other_circuit_app6(inputs: torch.Tensor, weights_sn: torch.Tensor, weights_ent: torch.Tensor) -> torch.Tensor:
+
+    # Approach 6:
+    #   - X, Y layers: split;
+    #   - Sn layer: split;
+    #   - inverse graph state layer: trainable.
+
+    main_num_qubits = 6
+    sub_num_qubits = 4
+    num_qubits = main_num_qubits+sub_num_qubits
+
+    graph_state(inputs, main_num_qubits + sub_num_qubits)    
+
+    if weights_sn.ndim != 2 or weights_sn.shape[1] != 6:
+        weights_shape = "(num_layers, 6)"
+        raise WeightsShapeError(weights_shape)
+    
+    num_layers, _ = weights_sn.shape
+
+    for layer_index in range(num_layers):
+        Sn_X_layer(weight=weights_sn[layer_index, 0], num_qubits=main_num_qubits)
+        Sn_Y_layer(weight=weights_sn[layer_index, 2], num_qubits=main_num_qubits)
+        Sn_ZZ_layer(weight=weights_sn[layer_index, 4], num_qubits=main_num_qubits)
+
+        for i in range(sub_num_qubits - 1): # apply X, Y gates to the subgraph qubits
+                qml.RX(weights_sn[layer_index, 1], wires=main_num_qubits+i+1)
+                qml.RY(weights_sn[layer_index, 1], wires=main_num_qubits+i+1)
+
+        for i in range(sub_num_qubits - 1): # apply same Sn block to subgraph qubits
+            j = i
+            while j < sub_num_qubits - 1:
+                qml.CNOT(wires=[main_num_qubits+i, main_num_qubits+j+1])
+                qml.RZ(weights_sn[layer_index, 5], wires=main_num_qubits+j+1)
+                qml.CNOT(wires=[main_num_qubits+i, main_num_qubits+j+1])
+                j += 1
+
+    '''if inputs.ndim == NON_BATCHED_INPUT:
+        inputs = inputs.reshape(1, num_qubits, num_qubits)
+    elif inputs.ndim == BATCHED_INPUT: # batched input
+        inputs = inputs.reshape(inputs.shape[0], num_qubits, num_qubits)
+    else:
+        msg = "Inputs are expected to be of size (num_batches, num_nodes*num_nodes) or (num_nodes*num_nodes,)."
+        raise ValueError(msg)'''
+
+    for i, j in combinations(range(num_qubits), 2):
+        qml.ControlledPhaseShift(weights_ent[0], wires=[i, j]) # 5th trainable parameter here (same across all wires)
+
+    return qml.expval(gate_prod(qml.Z(index) for index in range(main_num_qubits))) # 1 output based on main nodes measurements
+
+def subgraph_other_circuit_app6_per_qubit(inputs: torch.Tensor, weights_sn: torch.Tensor, weights_ent: torch.Tensor) -> torch.Tensor:
+
+    main_num_qubits = 6
+    sub_num_qubits = 4
+    num_qubits = main_num_qubits+sub_num_qubits
+
+    graph_state(inputs, main_num_qubits + sub_num_qubits)    
+
+    if weights_sn.ndim != 2 or weights_sn.shape[1] != 6:
+        weights_shape = "(num_layers, 6)"
+        raise WeightsShapeError(weights_shape)
+    
+    num_layers, _ = weights_sn.shape
+
+    for layer_index in range(num_layers):
+        Sn_X_layer(weight=weights_sn[layer_index, 0], num_qubits=main_num_qubits)
+        Sn_Y_layer(weight=weights_sn[layer_index, 2], num_qubits=main_num_qubits)
+        Sn_ZZ_layer(weight=weights_sn[layer_index, 4], num_qubits=main_num_qubits)
+
+        for i in range(sub_num_qubits - 1): # apply X, Y gates to the subgraph qubits
+                qml.RX(weights_sn[layer_index, 1], wires=main_num_qubits+i+1)
+                qml.RY(weights_sn[layer_index, 1], wires=main_num_qubits+i+1)
+
+        for i in range(sub_num_qubits - 1): # apply same Sn block to subgraph qubits
+            j = i
+            while j < sub_num_qubits - 1:
+                qml.CNOT(wires=[main_num_qubits+i, main_num_qubits+j+1])
+                qml.RZ(weights_sn[layer_index, 5], wires=main_num_qubits+j+1)
+                qml.CNOT(wires=[main_num_qubits+i, main_num_qubits+j+1])
+                j += 1
+
+    '''if inputs.ndim == NON_BATCHED_INPUT:
+        inputs = inputs.reshape(1, num_qubits, num_qubits)
+    elif inputs.ndim == BATCHED_INPUT: # batched input
+        inputs = inputs.reshape(inputs.shape[0], num_qubits, num_qubits)
+    else:
+        msg = "Inputs are expected to be of size (num_batches, num_nodes*num_nodes) or (num_nodes*num_nodes,)."
+        raise ValueError(msg)'''
+
+    for i, j in combinations(range(num_qubits), 2):
+        qml.ControlledPhaseShift(weights_ent[0], wires=[i, j]) # 5th trainable parameter here (same across all wires)
+
+    return [qml.expval(qml.Z(i)) for i in range(main_num_qubits)] # per qubit
+
+def subgraph_other_circuit_app7(inputs: torch.Tensor, weights_sn: torch.Tensor) -> torch.Tensor:
+
+    # Approach 7:
+    #   - X, Y layers: common;
+    #   - Sn layer: common;
+    #   - inverse graph state layer: absent.
+
+    main_num_qubits = 6
+    sub_num_qubits = 4
+    num_qubits = main_num_qubits+sub_num_qubits
+
+    graph_state(inputs, main_num_qubits + sub_num_qubits)
+
+    if weights_sn.ndim != 2 or weights_sn.shape[1] != 3:
+        weights_shape = "(num_layers, 3)"
+        raise WeightsShapeError(weights_shape)
+    
+    num_layers, _ = weights_sn.shape
+
+    for layer_index in range(num_layers):
+        Sn_X_layer(weight=weights_sn[layer_index, 0], num_qubits=main_num_qubits+sub_num_qubits)
+        Sn_Y_layer(weight=weights_sn[layer_index, 1], num_qubits=main_num_qubits+sub_num_qubits)
+        Sn_ZZ_layer(weight=weights_sn[layer_index, 2], num_qubits=main_num_qubits+sub_num_qubits)
+
+    return qml.expval(gate_prod(qml.Z(index) for index in range(main_num_qubits))) # 1 output based on main nodes measurements
+
+def subgraph_other_circuit_app7_per_qubit(inputs: torch.Tensor, weights_sn: torch.Tensor) -> torch.Tensor:
+
+    main_num_qubits = 6
+    sub_num_qubits = 4
+    num_qubits = main_num_qubits+sub_num_qubits
+
+    graph_state(inputs, main_num_qubits + sub_num_qubits)
+
+    if weights_sn.ndim != 2 or weights_sn.shape[1] != 3:
+        weights_shape = "(num_layers, 3)"
+        raise WeightsShapeError(weights_shape)
+    
+    num_layers, _ = weights_sn.shape
+
+    for layer_index in range(num_layers):
+        Sn_X_layer(weight=weights_sn[layer_index, 0], num_qubits=main_num_qubits+sub_num_qubits)
+        Sn_Y_layer(weight=weights_sn[layer_index, 1], num_qubits=main_num_qubits+sub_num_qubits)
+        Sn_ZZ_layer(weight=weights_sn[layer_index, 2], num_qubits=main_num_qubits+sub_num_qubits)
+
+    return [qml.expval(qml.Z(i)) for i in range(main_num_qubits)] # per qubit
+
+def subgraph_other_circuit_app8(inputs: torch.Tensor, weights_sn: torch.Tensor) -> torch.Tensor:
+
+    # Approach 8:
+    #   - X, Y layers: common;
+    #   - Sn layer: common;
+    #   - inverse graph state layer: fixed.
+
+    main_num_qubits = 6
+    sub_num_qubits = 4
+    num_qubits = main_num_qubits+sub_num_qubits
+
+    graph_state(inputs, main_num_qubits+sub_num_qubits)
+
+    if weights_sn.ndim != 2 or weights_sn.shape[1] != 3:
+        weights_shape = "(num_layers, 3)"
+        raise WeightsShapeError(weights_shape)
+    
+    num_layers, _ = weights_sn.shape
+
+    for layer_index in range(num_layers):
+        Sn_X_layer(weight=weights_sn[layer_index, 0], num_qubits=main_num_qubits+sub_num_qubits)
+        Sn_Y_layer(weight=weights_sn[layer_index, 1], num_qubits=main_num_qubits+sub_num_qubits)
+        Sn_ZZ_layer(weight=weights_sn[layer_index, 2], num_qubits=main_num_qubits+sub_num_qubits)
+
+    if inputs.ndim == NON_BATCHED_INPUT:
+        inputs = inputs.reshape(1, num_qubits, num_qubits)
+    elif inputs.ndim == BATCHED_INPUT: # batched input
+        inputs = inputs.reshape(inputs.shape[0], num_qubits, num_qubits)
+    else:
+        msg = "Inputs are expected to be of size (num_batches, num_nodes*num_nodes) or (num_nodes*num_nodes,)."
+        raise ValueError(msg)
+
+    for i, j in combinations(range(num_qubits), 2):
+        # We get I for inputs[a, i, j] = 0 and CZ for inputs[a, i, j] = 1 where
+        # inputs[a] is the adjacency matrix for the a'th input graph
+        qml.ControlledPhaseShift(np.pi*((1+inputs[:, i, j])%2), wires=[i, j])
+
+    return qml.expval(gate_prod(qml.Z(index) for index in range(main_num_qubits))) # 1 output based on main nodes measurements
+
+def subgraph_other_circuit_app8_per_qubit(inputs: torch.Tensor, weights_sn: torch.Tensor) -> torch.Tensor:
+
+    main_num_qubits = 6
+    sub_num_qubits = 4
+    num_qubits = main_num_qubits+sub_num_qubits
+
+    graph_state(inputs, main_num_qubits+sub_num_qubits)
+
+    if weights_sn.ndim != 2 or weights_sn.shape[1] != 3:
+        weights_shape = "(num_layers, 3)"
+        raise WeightsShapeError(weights_shape)
+    
+    num_layers, _ = weights_sn.shape
+
+    for layer_index in range(num_layers):
+        Sn_X_layer(weight=weights_sn[layer_index, 0], num_qubits=main_num_qubits+sub_num_qubits)
+        Sn_Y_layer(weight=weights_sn[layer_index, 1], num_qubits=main_num_qubits+sub_num_qubits)
+        Sn_ZZ_layer(weight=weights_sn[layer_index, 2], num_qubits=main_num_qubits+sub_num_qubits)
+
+    if inputs.ndim == NON_BATCHED_INPUT:
+        inputs = inputs.reshape(1, num_qubits, num_qubits)
+    elif inputs.ndim == BATCHED_INPUT: # batched input
+        inputs = inputs.reshape(inputs.shape[0], num_qubits, num_qubits)
+    else:
+        msg = "Inputs are expected to be of size (num_batches, num_nodes*num_nodes) or (num_nodes*num_nodes,)."
+        raise ValueError(msg)
+
+    for i, j in combinations(range(num_qubits), 2):
+        # We get I for inputs[a, i, j] = 0 and CZ for inputs[a, i, j] = 1 where
+        # inputs[a] is the adjacency matrix for the a'th input graph
+        qml.ControlledPhaseShift(np.pi*((1+inputs[:, i, j])%2), wires=[i, j])
+
+    return [qml.expval(qml.Z(i)) for i in range(main_num_qubits)] # per qubit
+
+def subgraph_other_circuit_app9(inputs: torch.Tensor, weights_sn: torch.Tensor, weights_ent: torch.Tensor) -> torch.Tensor:
+
+    # Approach 9:
+    #   - X, Y layers: common;
+    #   - Sn layer: common;
+    #   - inverse graph state layer: trainable.
+
+    main_num_qubits = 6
+    sub_num_qubits = 4
+    num_qubits = main_num_qubits+sub_num_qubits
+
+    graph_state(inputs, main_num_qubits+sub_num_qubits)
+
+    if weights_sn.ndim != 2 or weights_sn.shape[1] != 3:
+        weights_shape = "(num_layers, 3)"
+        raise WeightsShapeError(weights_shape)
+    
+    num_layers, _ = weights_sn.shape
+
+    for layer_index in range(num_layers):
+        Sn_X_layer(weight=weights_sn[layer_index, 0], num_qubits=main_num_qubits+sub_num_qubits)
+        Sn_Y_layer(weight=weights_sn[layer_index, 1], num_qubits=main_num_qubits+sub_num_qubits)
+        Sn_ZZ_layer(weight=weights_sn[layer_index, 2], num_qubits=main_num_qubits+sub_num_qubits)
+
+    '''if inputs.ndim == NON_BATCHED_INPUT:
+        inputs = inputs.reshape(1, num_qubits, num_qubits)
+    elif inputs.ndim == BATCHED_INPUT: # batched input
+        inputs = inputs.reshape(inputs.shape[0], num_qubits, num_qubits)
+    else:
+        msg = "Inputs are expected to be of size (num_batches, num_nodes*num_nodes) or (num_nodes*num_nodes,)."
+        raise ValueError(msg)'''
+
+    for i, j in combinations(range(num_qubits), 2):
+        qml.ControlledPhaseShift(weights_ent[0], wires=[i, j]) # 5th trainable parameter here (same across all wires)
+
+
+    return qml.expval(gate_prod(qml.Z(index) for index in range(main_num_qubits))) # 1 output based on main nodes measurements
+
+def subgraph_other_circuit_app9_per_qubit(inputs: torch.Tensor, weights_sn: torch.Tensor, weights_ent: torch.Tensor) -> torch.Tensor:
+
+    main_num_qubits = 6
+    sub_num_qubits = 4
+    num_qubits = main_num_qubits+sub_num_qubits
+
+    graph_state(inputs, main_num_qubits+sub_num_qubits)
+
+    if weights_sn.ndim != 2 or weights_sn.shape[1] != 3:
+        weights_shape = "(num_layers, 3)"
+        raise WeightsShapeError(weights_shape)
+    
+    num_layers, _ = weights_sn.shape
+
+    for layer_index in range(num_layers):
+        Sn_X_layer(weight=weights_sn[layer_index, 0], num_qubits=main_num_qubits+sub_num_qubits)
+        Sn_Y_layer(weight=weights_sn[layer_index, 1], num_qubits=main_num_qubits+sub_num_qubits)
+        Sn_ZZ_layer(weight=weights_sn[layer_index, 2], num_qubits=main_num_qubits+sub_num_qubits)
+
+    '''if inputs.ndim == NON_BATCHED_INPUT:
+        inputs = inputs.reshape(1, num_qubits, num_qubits)
+    elif inputs.ndim == BATCHED_INPUT: # batched input
+        inputs = inputs.reshape(inputs.shape[0], num_qubits, num_qubits)
+    else:
+        msg = "Inputs are expected to be of size (num_batches, num_nodes*num_nodes) or (num_nodes*num_nodes,)."
+        raise ValueError(msg)'''
+
+    for i, j in combinations(range(num_qubits), 2):
+        qml.ControlledPhaseShift(weights_ent[0], wires=[i, j]) # 5th trainable parameter here (same across all wires)
+
+    return [qml.expval(qml.Z(i)) for i in range(main_num_qubits)] # per qubit
+
+'''def ansatz_layers(weights_sn, main_num_qubits, sub_num_qubits, inputs=None):
+    num_qubits = main_num_qubits + sub_num_qubits
+    num_layers, _ = weights_sn.shape
+    
+    for layer_index in range(num_layers):
+        Sn_X_layer(weight=weights_sn[layer_index, 0], num_qubits=num_qubits)
+        Sn_Y_layer(weight=weights_sn[layer_index, 1], num_qubits=num_qubits)
+        Sn_ZZ_layer(weight=weights_sn[layer_index, 2], num_qubits=main_num_qubits)
+        for i in range(sub_num_qubits - 1):
+            j = i
+            while j < sub_num_qubits - 1:
+                qml.CNOT(wires=[main_num_qubits + i, main_num_qubits + j + 1])
+                qml.RZ(weights_sn[layer_index, 3], wires=main_num_qubits + j + 1)
+                qml.CNOT(wires=[main_num_qubits + i, main_num_qubits + j + 1])
+                j += 1
+
+    if inputs.ndim == NON_BATCHED_INPUT:
+        inputs = inputs.reshape(1, num_qubits, num_qubits)
+    elif inputs.ndim == BATCHED_INPUT: # batched input
+        inputs = inputs.reshape(inputs.shape[0], num_qubits, num_qubits)
+    else:
+        msg = "Inputs are expected to be of size (num_batches, num_nodes*num_nodes) or (num_nodes*num_nodes,)."
+        raise ValueError(msg)
+
+    for i, j in combinations(range(num_qubits), 2):
+        qml.ControlledPhaseShift(np.pi*((1 + inputs[:, i, j]) % 2), wires=[i, j])'''
 
 def Dn_circuit(inputs: torch.Tensor, weights: torch.Tensor) -> torch.Tensor:
     """Create a circuit which is invariant under dihedral permutations.
@@ -1019,31 +1700,10 @@ def Dn_circuit(inputs: torch.Tensor, weights: torch.Tensor) -> torch.Tensor:
 
     return qml.expval(gate_prod(qml.Z(index) for index in range(num_qubits)))
 
-############ Energy-invariant quantum corcuit ############
-############ Layer of independent Z rotations and independent xx+yy rotations ############
-
-
 def Energy_circuit(inputs: torch.Tensor, weights_z: torch.tensor, weights_xx_yy: torch.tensor) -> torch.Tensor:
-    """
-    Example:
-        ```
-        import pennylane as qml
 
-        from src import circuit, utils
+    ############ Layer of independent Z rotations and independent xx+yy rotations ############
 
-        dataset = utils.load_patterns("./data/graph_connectedness/nodes_6-graphs_3000-edges_5_6_7.pt", num_nodes=6)
-        X, Y = dataset.tensors
-
-        num_qubits = 6
-        num_layers = 5
-        dev = qml.device("default.qubit", wires=num_qubits)
-        weight_shapes = {"weights": (num_layers, 3)}
-        qnode = qml.QNode(circuit.Sn_circuit, device=dev, interface="torch")
-
-        model = qml.qnn.TorchLayer(qnode, weight_shapes)
-        print(model(X[:2]))
-        ```
-    """
     num_qubits = get_num_qubits_from_inputs(inputs)
 
     graph_state(inputs, num_qubits)

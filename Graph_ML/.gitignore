@@ -1,0 +1,9 @@
+Accuracy_per_node.py
+RandomGraphQNNSimultation.ipynb
+output/
+wandb/
+Images/
+qc_venv/
+.DS_Store
+*.pyc
+__pycache__/
