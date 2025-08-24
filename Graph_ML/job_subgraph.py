@@ -53,10 +53,17 @@ if __name__ == "__main__":
     )
     parser.add_argument("-f", "--find", help="Find the subgraph or not", default="n")
     parser.add_argument(
-        "-d",
-        "--data",
-        help="filename for dataset",
-        default="nodes_6-graphs_3000-edges_5_6_7.pt",
+        "-dtrain",
+        "--data_train",
+        help="filename for train dataset",
+        default="graph-6_subgraph-4_3000_iso_train.pt",
+        type=str,
+    )
+    parser.add_argument(
+        "-dtest",
+        "--data_test",
+        help="filename for test dataset",
+        default="graph-6_subgraph-4_3000_iso_test.pt",
         type=str,
     )
     parser.add_argument("-e", "--epochs", help="number of epochs", default=50, type=int)
@@ -68,7 +75,14 @@ if __name__ == "__main__":
 
     weight_shapes: dict[str, tuple[int, ...]] = {}
 
-    if flags.circuit == "1":
+    if flags.circuit == "0":
+        weight_shapes = {
+            "weights_se": (flags.layers, flags.qubits + flags.subsize)
+        }  # strongly entangling baseline circuit
+        circ = circuit.subgraph_circuit_strongly_ent_app2
+        approach = 0
+
+    elif flags.circuit == "1":
         weight_shapes = {"weights_sn": (flags.layers, 4)}  # X + Y + Sn + Sn
         circ = (
             circuit.subgraph_other_circuit_app1_per_qubit
@@ -179,13 +193,24 @@ if __name__ == "__main__":
             "/Users/home/Quantum_Computing/Pennylane/Graph_ML/output/subgraph"
         )
     )
-    dataset = (
-        utils.load_patterns_subgraph_isomorph_per_qubit(  # change here to isomorphism-respecting dataset splitting
-            base / flags.data, flags.qubits, flags.subsize
+
+    dataset_train = (
+        utils.load_patterns_subgraph_per_qubit_train(
+            base / flags.data_train, flags.qubits, flags.subsize
         )
         if flags.find == "y"
         else utils.load_patterns_subgraph(
-            base / flags.data, flags.qubits, flags.subsize
+            base / flags.data_train, flags.qubits, flags.subsize
+        )
+    )
+
+    dataset_test = (
+        utils.load_patterns_subgraph_isomorph_per_qubit_test(
+            base / flags.data_test, flags.qubits, flags.subsize
+        )
+        if flags.find == "y"
+        else utils.load_patterns_subgraph(
+            base / flags.data_train, flags.qubits, flags.subsize
         )
     )
 
@@ -199,7 +224,8 @@ if __name__ == "__main__":
             approach,
             qnode,
             weight_shapes,
-            dataset,
+            dataset_train,
+            dataset_test,
             samplings=flags.samplings,
             epochs=flags.epochs,
         )
@@ -213,7 +239,7 @@ if __name__ == "__main__":
             approach,
             qnode,
             weight_shapes,
-            dataset,
+            dataset_train,  # dataset for training and testing are same in binary case
             samplings=flags.samplings,
             epochs=flags.epochs,
         )

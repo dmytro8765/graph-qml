@@ -1,9 +1,9 @@
 """
-Use Qiskit ti get pretty visualization of each quantum circuit,
+Use Qiskit to get pretty visualization of each quantum circuit,
 used to solve the subgraph problem.
 """
 
-from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
+from qiskit import QuantumCircuit, QuantumRegister
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -45,6 +45,12 @@ def custom_ry(theta, label):
     return circ.to_gate()
 
 
+def custom_rz(theta, label):
+    circ = QuantumCircuit(1, name=label)
+    circ.ry(theta, 0)
+    return circ.to_gate()
+
+
 def perm_invar_gate_main(theta):
     qc_perm = QuantumCircuit(2, name="Sn_main")
     qc_perm.cx(0, 1)
@@ -65,6 +71,28 @@ def ent_trainable(theta):
     qc_perm = QuantumCircuit(2, name="CP")
     qc_perm.cp(theta, 0, 1)
     return qc_perm.to_gate()
+
+
+def subgraph_baseline(weights):
+    qr = QuantumRegister(6)
+    qc = QuantumCircuit(qr)
+
+    num_layers, _ = weights.shape
+
+    for layer_index in range(num_layers):
+        for qubit in range(num_qubits):
+            rz_gate = custom_rz(weights[layer_index, 0], "rz_0")
+            qc.append(rz_gate, [qr[qubit]])
+        qc.barrier()
+
+        """
+        for qubit in range(num_qubits):
+            ry_gate = custom_ry(weights[layer_index, 0], "ry_0")
+            qc.append(ry_gate, [qr[qubit]])
+        qc.barrier()
+        """
+
+    return qc
 
 
 def subgraph_circ1(weights_sn):
@@ -412,6 +440,11 @@ def subgraph_circ9(weights_sn, weights_ent):
 # ======== Draw the wanted circuit ========
 
 circ_data = {
+    0: {
+        "circuit": subgraph_baseline,
+        "args": {"weights": np.random.rand(1, 1)},
+        "name": "Circuit 0",
+    },
     1: {
         "circuit": subgraph_circ1,
         "args": {"weights_sn": np.random.rand(1, 4)},
@@ -476,14 +509,14 @@ circ_data = {
 
 for i in range(len(circ_data)):
 
-    data = circ_data[i + 1]
+    data = circ_data[i]
     circuit = data["circuit"]
     qc = circuit(**data["args"])
 
     fig = qc.draw("mpl", style=custom_style)
-    fig.suptitle(f"Circuit_{i+1}", fontsize=20)
+    fig.suptitle(f"Circuit_{i}", fontsize=20)
     fig.savefig(
-        f"output/subgraph/Circuit_diagrams/Circuit_{i+1}.png",
+        f"output/subgraph/Circuit_diagrams/Circuit_{i}.png",
         dpi=300,
         bbox_inches="tight",
     )

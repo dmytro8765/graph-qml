@@ -152,20 +152,40 @@ def load_patterns_subgraph_per_qubit(
     )
 
 
-def load_patterns_subgraph_isomorph_per_qubit(
+def load_patterns_subgraph_per_qubit_train(
+    file_path: str, num_nodes_main: int, num_nodes_sub: int
+) -> torch.utils.data.TensorDataset:
+    """Load dataset."""
+    patterns = torch.load(file_path, weights_only=False)
+    X_main = patterns[:, : num_nodes_main**2]
+    X_sub = patterns[:, num_nodes_main**2 : num_nodes_main**2 + num_nodes_sub**2]
+    X_main_and_sub = patterns[
+        :, num_nodes_main**2 + num_nodes_sub**2 : -num_nodes_main
+    ]  # stop num_nodes_main elements before the end (6/8/10 labels)
+    Y = patterns[:, -num_nodes_main:]  # last num_nodes_main elements, i.e. labels
+    return torch.utils.data.TensorDataset(
+        X_main.float(), X_sub.float(), X_main_and_sub.float(), Y.float()
+    )
+
+
+def load_patterns_subgraph_isomorph_per_qubit_test(
     file_path: str, num_nodes_main: int, num_nodes_sub: int
 ) -> torch.utils.data.TensorDataset:
     """Load dataset."""
     patterns = torch.load(file_path)
     X_main = patterns[:, : num_nodes_main**2]
+    print("X_main shape: ", X_main.shape)
     X_sub = patterns[:, num_nodes_main**2 : num_nodes_main**2 + num_nodes_sub**2]
+    print("X_sub shape: ", X_sub.shape)
     X_main_and_sub = patterns[
         :,
         num_nodes_main**2
         + num_nodes_sub**2 : num_nodes_main**2
         + num_nodes_sub**2
         + (num_nodes_main + num_nodes_sub) ** 2,
-    ]  # finish after taking the 10x10 combined matrix
+    ]  # finish after taking the (main + sub)x(main + sub) combined matrix
+
+    print("X_main_and_sub shape: ", X_main_and_sub.shape)
 
     labels_start = (
         num_nodes_main**2 + num_nodes_sub**2 + (num_nodes_main + num_nodes_sub) ** 2
@@ -177,8 +197,10 @@ def load_patterns_subgraph_isomorph_per_qubit(
     ]  # take everything after all the flattened adjecencies to be the main label
 
     Y = Y.reshape(
-        Y.shape[0], -1, 6
-    )  # break up all the lables into groups of 6 (for each found isomorphism)
+        Y.shape[0], -1, num_nodes_main
+    )  # break up all the lables into groups of num_qubits (6, or 8) (for each found isomorphism)
+
+    print("Y_final shape: ", Y.shape)
 
     return torch.utils.data.TensorDataset(
         X_main.float(), X_sub.float(), X_main_and_sub.float(), Y.float()

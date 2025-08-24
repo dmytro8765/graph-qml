@@ -31,7 +31,8 @@ def fit(
     approach: int,
     circuit: qml.QNode,
     circuit_weight_shapes: dict[str, tuple],
-    dataset: torch.utils.data.TensorDataset,
+    dataset_train: torch.utils.data.TensorDataset,
+    dataset_test: torch.utils.data.TensorDataset,
     samplings: int = 30,
     epochs: int = 50,
 ) -> tuple[
@@ -56,10 +57,13 @@ def fit(
         ]
     )
 
+    # print(init_weights)
+    # print(circuit_weight_shapes)
+
     group_name = f"Circuit_isomorph_{approach}"
 
     for sampling, (train_indices, test_indices) in enumerate(
-        subsampling.split(dataset)
+        subsampling.split(dataset_train)
     ):
 
         # Initialize a new W&B run per sample with grouping by circuit
@@ -82,52 +86,29 @@ def fit(
             },
         )
 
-        x_main_train, x_sub_train, big_input_train, y_train = dataset[train_indices]
-        x_main_test, x_sub_test, big_input_test, y_test = dataset[test_indices]
+        # print(dataset[train_indices])
 
-        y_train_list = y_train.tolist()
-        y_final = []
+        x_main_train, x_sub_train, big_input_train, y_train = dataset_train[
+            train_indices
+        ]
+        x_main_test, x_sub_test, big_input_test, y_test = dataset_test[test_indices]
 
-        for y_train_point in y_train_list:
-            no_iso = 0
-            iso = []
-            for config in range(len(y_train_point)):
-                if float(1) not in y_train_point[config]:
-                    no_iso += 1
-                else:
-                    iso.append(config)
+        # print(y_train.tolist())
 
-            if no_iso == len(y_train_point):
-                y_final.append([float(0)] * 6)
-            else:
-                node_0 = 0
-                node_1 = 0
-                node_2 = 0
-                node_3 = 0
-                node_4 = 0
-                node_5 = 0
-                for config in iso:
-                    node_0 = node_0 + y_train_point[config][0]
-                    node_1 = node_1 + y_train_point[config][1]
-                    node_2 = node_2 + y_train_point[config][2]
-                    node_3 = node_3 + y_train_point[config][3]
-                    node_4 = node_4 + y_train_point[config][4]
-                    node_5 = node_5 + y_train_point[config][5]
-                y_final_point = [
-                    node_0 / len(iso),
-                    node_1 / len(iso),
-                    node_2 / len(iso),
-                    node_3 / len(iso),
-                    node_4 / len(iso),
-                    node_5 / len(iso),
-                ]
-                y_final.append(y_final_point)
-
-        targets["train"].append((sampling, y_final))
+        targets["train"].append((sampling, y_train.tolist()))
         targets["test"].append((sampling, y_test.tolist()))
 
         model = qml.qnn.TorchLayer(circuit, circuit_weight_shapes)
         model.load_state_dict(init_weights)
+
+        """# ---------------- Take a single datapoint (first one from training set) ----------------
+        sample_input = big_input_train[0].detach().numpy()
+        sample_weights = init_weights["weights_sn"].detach().numpy()
+
+        # Draw the circuit with the sample input + init weights
+        drawer = qml.draw(circuit)
+        print(drawer(sample_input, sample_weights))
+        # ---------------- End of drawing ----------------"""
 
         optimizer = torch.optim.SGD(model.parameters(), lr=0.08)
         loss = torch.nn.BCEWithLogitsLoss()
@@ -136,7 +117,7 @@ def fit(
             x_main_train,
             x_sub_train,
             big_input_train,
-            torch.tensor(np.array(y_final), dtype=torch.float),
+            torch.tensor(np.array(y_train), dtype=torch.float),
         )
         data_loader = torch.utils.data.DataLoader(
             train_dataset, batch_size=25, shuffle=True

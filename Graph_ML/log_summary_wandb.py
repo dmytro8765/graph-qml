@@ -20,14 +20,16 @@ import argparse
 ext_diag = f"output/subgraph/Circuit_diagrams/Circuit_"
 
 circuit_diagrams = []
-for i in range(9):
-    circuit_diagrams.append(ext_diag + str(i + 1))
+for i in range(10):
+    circuit_diagrams.append(ext_diag + str(i))
 
-params_15 = [16, 16, 17, 12, 12, 13, 15, 15, 16]
-params_30 = [28, 28, 29, 30, 30, 31, 30, 30, 31]
-params_60 = [60, 60, 61, 60, 60, 61, 60, 60, 61]
-params_90 = [88, 88, 89, 90, 90, 91, 90, 90, 91]
-params_120 = [120, 120, 121, 120, 120, 121, 120, 120, 121]
+print(circuit_diagrams)
+
+params_15 = [15, 16, 16, 17, 12, 12, 13, 15, 15, 16]
+params_30 = [30, 28, 28, 29, 30, 30, 31, 30, 30, 31]
+params_60 = [60, 60, 60, 61, 60, 60, 61, 60, 60, 61]
+params_90 = [90, 88, 88, 89, 90, 90, 91, 90, 90, 91]
+params_120 = [120, 20, 120, 121, 120, 120, 121, 120, 120, 121]
 
 default_params = params_15
 
@@ -280,7 +282,7 @@ def extract_prediction_accuracy_per_qubit_isomorph(
     for prediction_file_name, target_file_name in zip(
         prediction_file_names, target_file_names
     ):
-        print("Summarizing circuit ", k + 1)
+        # print("Summarizing circuit ", k)
         predictions = pd.read_csv(prediction_file_name)
         targets = pd.read_csv(target_file_name)
 
@@ -395,7 +397,7 @@ if __name__ == "__main__":
         "--circuits",
         nargs="+",
         help="List of executed circuits",
-        default=[1],
+        default=[0],
         type=int,
     )
     parser.add_argument(
@@ -441,7 +443,7 @@ summary_name = ""
 
 for i in range(len(flags.circuits)):
     j = flags.circuits[i]
-    num_params = parameters[j - 1]
+    num_params = parameters[j]
 
     target_file_names.append(
         ext_output
@@ -521,7 +523,7 @@ table = wandb.Table(
 for i in range(len(flags.circuits)):
     j = flags.circuits[i]
     diagram_img = wandb.Image(
-        f"{circuit_diagrams[j-1]}.png"
+        f"{circuit_diagrams[j]}.png"
     )  # j-1, not i, since 1, 3, 5 --> i will still give 0, 1, 2
     acc_img = wandb.Image(f"{accuracies[i]}.png")
 

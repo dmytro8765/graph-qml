@@ -42,8 +42,8 @@ for _ in range(num_samples):
                 iso = 0
                 for mapping in GM.subgraph_isomorphisms_iter():
                     label = [0] * main_nodes
-                    print("Mapping keys (main graph nodes):", list(mapping.keys()))
-                    print("Mapping values (subgraph nodes):", list(mapping.values()))
+                    # print("Mapping keys (main graph nodes):", list(mapping.keys()))
+                    # print("Mapping values (subgraph nodes):", list(mapping.values()))
                     for big_node in mapping.keys():
                         label[big_node] = 1
                     break
@@ -80,11 +80,11 @@ for _ in range(num_samples):
     # print(data_point)
 
     dataset.append(data_point)
-    print()
+    print("Datapoint: ", data_point)
     print()
 
-dataset = torch.tensor(np.array(dataset), dtype=torch.float)
+"""dataset = torch.tensor(np.array(dataset), dtype=torch.float)
 torch.save(
     dataset,
     "/Users/home/Quantum_Computing/Pennylane/Graph_ML/data/subgraph/graph-6_subgraph-4_per_qubit_3000.pt",
-)
+)"""
