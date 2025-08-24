@@ -1,3 +1,6 @@
+output
+Preliminary_JOIN.csv
+wandb/
 Accuracy_per_node.py
 RandomGraphQNNSimultation.ipynb
 output/
@@ -8,3 +11,9 @@ qc_venv/
 *.pyc
 __pycache__/
 data/plots/
+data/subgraph/graph-6_subgraph-4_3000_iso_test.pt
+data/subgraph/graph-6_subgraph-4_3000_iso_train.pt
+data/subgraph/graph-6_subgraph-4_3000.pt
+data/subgraph/graph-6_subgraph-4_per_qubit_3000_isomorph.pt
+data/subgraph/graph-6_subgraph-4_per_qubit_3000.pt
+data/subgraph/graph-8_subgraph-4_per_qubit_3000_isomorph.pt
