@@ -1,3 +1,16 @@
 output
 Preliminary_JOIN.csv
 wandb/
+Accuracy_per_node.py
+RandomGraphQNNSimultation.ipynb
+output/
+wandb/
+Images/
+qc_venv/
+.DS_Store
+*.pyc
+__pycache__/
+data/plots
+data/**/*.pt
+repo-clean/
+data/**/*.csv
