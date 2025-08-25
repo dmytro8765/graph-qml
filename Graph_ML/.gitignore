@@ -12,3 +12,4 @@ qc_venv/
 __pycache__/
 data/plots
 *.pt
+repo-clean/
