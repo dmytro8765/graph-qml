@@ -77,9 +77,9 @@ if __name__ == "__main__":
 
     if flags.circuit == "0":
         weight_shapes = {
-            "weights_se": (flags.layers, flags.qubits + flags.subsize)
+            "weights_se": (flags.layers, 3, flags.qubits + flags.subsize)
         }  # strongly entangling baseline circuit
-        circ = circuit.subgraph_circuit_strongly_ent_app2
+        circ = circuit.subgraph_circuit_strongly_ent_app1
         approach = 0
 
     elif flags.circuit == "1":
@@ -246,9 +246,13 @@ if __name__ == "__main__":
     )
 
     ext = (
-        f"Subgraph_per_qubit-approach-{approach}-{flags.qubits}-{flags.subsize}-{n_parameters}-sampling_{flags.samplings}-epochs_{flags.epochs}-"
+        f"Results_approach_"
+        + str(approach)
+        + f"/Subgraph_per_qubit-approach-{approach}-{flags.qubits}-{flags.subsize}-{n_parameters}-sampling_{flags.samplings}-epochs_{flags.epochs}-"
         if flags.find == "y"
-        else f"Subgraph-approach-{approach}-{flags.qubits}-{flags.subsize}-{n_parameters}-sampling_{flags.samplings}-epochs_{flags.epochs}-"
+        else f"Results_approach_"
+        + str(approach)
+        + f"/Subgraph-approach-{approach}-{flags.qubits}-{flags.subsize}-{n_parameters}-sampling_{flags.samplings}-epochs_{flags.epochs}-"
     )
 
     pd.DataFrame(targets["train"], columns=["sampling", "target"]).explode(

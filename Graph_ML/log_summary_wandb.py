@@ -25,16 +25,16 @@ for i in range(10):
 
 print(circuit_diagrams)
 
-params_15 = [15, 16, 16, 17, 12, 12, 13, 15, 15, 16]
+# params_15 = [15, 16, 16, 17, 12, 12, 13, 15, 15, 16]
 params_30 = [30, 28, 28, 29, 30, 30, 31, 30, 30, 31]
 params_60 = [60, 60, 60, 61, 60, 60, 61, 60, 60, 61]
 params_90 = [90, 88, 88, 89, 90, 90, 91, 90, 90, 91]
 params_120 = [120, 20, 120, 121, 120, 120, 121, 120, 120, 121]
 
-default_params = params_15
+default_params = params_60
 
 param_dict = {
-    15: params_15,
+    # 15: params_15,
     30: params_30,
     60: params_60,
     90: params_90,
@@ -448,9 +448,9 @@ for i in range(len(flags.circuits)):
     target_file_names.append(
         ext_output
         + (
-            "Subgraph_per_qubit-approach-"
+            "Results_approach_" + str(j) + "/Subgraph_per_qubit-approach-"
             if flags.find == "y"
-            else "Subgraph-approach-"
+            else "Results_approach_" + str(j) + "/Subgraph-approach-"
         )
         + str(j)
         + "-"
@@ -466,9 +466,9 @@ for i in range(len(flags.circuits)):
     prediction_file_names.append(
         ext_output
         + (
-            "Subgraph_per_qubit-approach-"
+            "Results_approach_" + str(j) + "/Subgraph_per_qubit-approach-"
             if flags.find == "y"
-            else "Subgraph-approach-"
+            else "Results_approach_" + str(j) + "/Subgraph-approach-"
         )
         + str(j)
         + "-"
