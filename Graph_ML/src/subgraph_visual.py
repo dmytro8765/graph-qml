@@ -18,6 +18,24 @@ custom_style = {
         "Sn_main": ("#8787ff", "#000000"),
         "Sn_sub": ("#f6bef5ff", "#000000"),
         "CP": ("#000000", "#FFFFFF"),
+        "rx_base_0": ("#88f17f", "#000000"),
+        "ry_base_0": ("#88c2ff", "#000000"),
+        "rz_base_0": ("#ffaa88", "#000000"),
+        "rx_base_1": ("#6fcf69", "#000000"),
+        "ry_base_1": ("#66aaff", "#000000"),
+        "rz_base_1": ("#ff9666", "#000000"),
+        "rx_base_2": ("#57c754", "#000000"),
+        "ry_base_2": ("#4491ff", "#000000"),
+        "rz_base_2": ("#ff8044", "#000000"),
+        "rx_base_3": ("#3fb23f", "#000000"),
+        "ry_base_3": ("#2278ff", "#000000"),
+        "rz_base_3": ("#ff6b22", "#000000"),
+        "rx_base_4": ("#279c2a", "#000000"),
+        "ry_base_4": ("#005fff", "#000000"),
+        "rz_base_4": ("#ff5500", "#000000"),
+        "rx_base_5": ("#116611", "#000000"),
+        "ry_base_5": ("#0044aa", "#000000"),
+        "rz_base_5": ("#773300", "#000000"),
     }
 }
 
@@ -71,28 +89,6 @@ def ent_trainable(theta):
     qc_perm = QuantumCircuit(2, name="CP")
     qc_perm.cp(theta, 0, 1)
     return qc_perm.to_gate()
-
-
-def subgraph_baseline(weights):
-    qr = QuantumRegister(6)
-    qc = QuantumCircuit(qr)
-
-    num_layers, _ = weights.shape
-
-    for layer_index in range(num_layers):
-        for qubit in range(num_qubits):
-            rz_gate = custom_rz(weights[layer_index, 0], "rz_0")
-            qc.append(rz_gate, [qr[qubit]])
-        qc.barrier()
-
-        """
-        for qubit in range(num_qubits):
-            ry_gate = custom_ry(weights[layer_index, 0], "ry_0")
-            qc.append(ry_gate, [qr[qubit]])
-        qc.barrier()
-        """
-
-    return qc
 
 
 def subgraph_circ1(weights_sn):
@@ -437,12 +433,44 @@ def subgraph_circ9(weights_sn, weights_ent):
     return qc
 
 
+def subgraph_baseline(weights):
+    """
+    Approach 1 of strong entanglement:
+    - different parameters for RX, RY, RZ layers;
+    - different parameters for each qubit inside a RX (RY, RZ) layer;
+    - each layer after rotations: entangle each qubit with the neighbour.
+
+    Parameters per layer: 3 * (main + sub), here = 30.
+    """
+
+    qr = QuantumRegister(6)
+    qc = QuantumCircuit(qr)
+
+    num_layers, _, _ = weights.shape
+
+    for layer_index in range(num_layers):
+        for qubit in range(num_qubits):
+            rx_gate = custom_rz(weights[layer_index, 0, qubit], f"rx_base_{qubit}")
+            qc.append(rx_gate, [qr[qubit]])
+            ry_gate = custom_rz(weights[layer_index, 1, qubit], f"ry_base_{qubit}")
+            qc.append(ry_gate, [qr[qubit]])
+            rz_gate = custom_rz(weights[layer_index, 2, qubit], f"rz_base_{qubit}")
+            qc.append(rz_gate, [qr[qubit]])
+
+    for i in range(6):
+        qc.cx(i, (i + 1) % 6)
+
+    qc.barrier()
+
+    return qc
+
+
 # ======== Draw the wanted circuit ========
 
 circ_data = {
     0: {
         "circuit": subgraph_baseline,
-        "args": {"weights": np.random.rand(1, 1)},
+        "args": {"weights": np.random.rand(1, 3, 6)},
         "name": "Circuit 0",
     },
     1: {
