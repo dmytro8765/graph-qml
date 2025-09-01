@@ -57,8 +57,8 @@ def fit(
         ]
     )
 
-    print(init_weights)
-    print(circuit_weight_shapes)
+    # print(init_weights)
+    # print(circuit_weight_shapes)
 
     group_name = f"Circuit_isomorph_{approach}"
 
@@ -68,10 +68,9 @@ def fit(
 
         # Initialize a new W&B run per sample with grouping by circuit
         run_name = f"Circuit_{approach}-sample_{sampling+1}"
-        print(find)
         wandb_run = wandb.init(
             project=(
-                "Subgraph search per qubit with Pennylane"
+                "Subgraph search per node with Pennylane"
                 if find == "y"
                 else "Binary subgraph search with Pennylane"
             ),

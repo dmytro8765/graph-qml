@@ -18,7 +18,9 @@ import pandas as pd
 import pennylane as qml
 import torch
 
-from src import circuit, performance_subgraph, performance_subgraph_per_qubit, utils
+from shared import circuit, utils
+from .graph import performance_subgraph
+from .node import performance_subgraph_node
 
 
 torch.manual_seed(123)
@@ -45,7 +47,7 @@ if __name__ == "__main__":
         "-b",
         "--base",
         help="Base directory",
-        default="/home/Users/Quantum_Computing/Pennylane/Graph_ML",
+        default="/home/Users/Quantum_Computing/Pennylane/Subgraph",
         type=str,
     )
     parser.add_argument(
@@ -185,12 +187,10 @@ if __name__ == "__main__":
     base = pathlib.Path(flags.base)
 
     base_output = (
-        pathlib.Path(
-            "/Users/home/Quantum_Computing/Pennylane/Graph_ML/output/subgraph_per_qubit"
-        )
+        pathlib.Path("/Users/home/Quantum_Computing/Pennylane/Subgraph/node/output")
         if flags.find == "y"
         else pathlib.Path(
-            "/Users/home/Quantum_Computing/Pennylane/Graph_ML/output/subgraph"
+            "/Users/home/Quantum_Computing/Pennylane/Subgraph/graph/output"
         )
     )
 
@@ -215,7 +215,7 @@ if __name__ == "__main__":
     )
 
     predictions, targets, weights = (
-        performance_subgraph_per_qubit.fit(
+        performance_subgraph_node.fit(
             flags.qubits,
             flags.subsize,
             flags.layers,
@@ -248,45 +248,31 @@ if __name__ == "__main__":
     ext = (
         f"Results_approach_"
         + str(approach)
-        + f"/Subgraph_per_qubit-approach-{approach}-{flags.qubits}-{flags.subsize}-{n_parameters}-sampling_{flags.samplings}-epochs_{flags.epochs}-"
+        + f"/Subgraph_node-approach-{approach}-{flags.qubits}-{flags.subsize}-{n_parameters}-sampling_{flags.samplings}-epochs_{flags.epochs}-"
         if flags.find == "y"
         else f"Results_approach_"
         + str(approach)
-        + f"/Subgraph-approach-{approach}-{flags.qubits}-{flags.subsize}-{n_parameters}-sampling_{flags.samplings}-epochs_{flags.epochs}-"
+        + f"/Subgraph_graph-approach-{approach}-{flags.qubits}-{flags.subsize}-{n_parameters}-sampling_{flags.samplings}-epochs_{flags.epochs}-"
     )
-
-    print(approach)
 
     pd.DataFrame(targets["train"], columns=["sampling", "target"]).explode(
         "target"
     ).to_csv(base_output / (ext + f"targets-train-{flags.name}.csv"), index=False)
-    # print('First file saved')
+
     pd.DataFrame(
         predictions["train"], columns=["sampling", "epoch", "prediction"]
     ).explode("prediction").to_csv(
         base_output / (ext + f"predictions-train-{flags.name}.csv"), index=False
     )
-    # print('Second file saved')
+
     pd.DataFrame(targets["test"], columns=["sampling", "target"]).explode(
         "target"
     ).to_csv(base_output / (ext + f"targets-test-{flags.name}.csv"), index=False)
-    # print('Third file saved')
+
     pd.DataFrame(
         predictions["test"], columns=["sampling", "epoch", "prediction"]
     ).explode("prediction").to_csv(
         base_output / (ext + f"predictions-test-{flags.name}.csv"), index=False
     )
-    # print('Fourth file saved')
 
     print("Epochs flag: ", flags.epochs)
-
-    ###### ADD EXTRA SAMPLES FOR CONNECTED ######
-
-    # extra_data = torch.load("/Users/home/qiskit_env/Pennylane/data/graph_connectedness/nodes_8-graphs_10_edge_cases.pt")
-
-    # extra_x = extra_data[:, :-1]  # shape: (7, 64)
-    # extra_y = extra_data[:, -1]  # shape: (7,)
-
-    # print(extra_data.size()) #(7, 65) --> 7 graphs, for each: 8x8 adjacency + 1 label
-
-    ###### DONE WITH EXTRA SAMPLES FOR CONNECTED ######

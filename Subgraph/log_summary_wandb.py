@@ -13,17 +13,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import wandb
-import ast
 import argparse
-
-# Location of all circuit diagrams
-ext_diag = f"output/subgraph/Circuit_diagrams/Circuit_"
-
-circuit_diagrams = []
-for i in range(10):
-    circuit_diagrams.append(ext_diag + str(i))
-
-print(circuit_diagrams)
 
 # params_15 = [15, 16, 16, 17, 12, 12, 13, 15, 15, 16]
 params_30 = [30, 28, 28, 29, 30, 30, 31, 30, 30, 31]
@@ -99,11 +89,13 @@ def extract_prediction_accuracy(
             errors = data.std(axis=0)
             combined_df[f"{model_id}_Error"] = errors
 
-        """# Check the final table for outliers before exporting
+        """
+        # Check the final table for outliers before exporting
         outliers = combined_df[combined_df.filter(like='_Mean').gt(1).any(axis=1)]
         if not outliers.empty:
             print("⚠️ Outliers in mean values detected:")
-            print(outliers)"""
+            print(outliers)
+        """
 
         combined_df = combined_df.rename(
             columns={
@@ -146,7 +138,7 @@ def extract_prediction_accuracy(
     return accuracies_plots
 
 
-def extract_prediction_accuracy_per_qubit(
+def extract_prediction_accuracy_node(
     prediction_file_names,
     target_file_names,
     num_samples,
@@ -266,7 +258,7 @@ def extract_prediction_accuracy_per_qubit(
     return accuracies_plots
 
 
-def extract_prediction_accuracy_per_qubit_isomorph(
+def extract_prediction_accuracy_node_isomorph(
     prediction_file_names,
     target_file_names,
     num_samples,
@@ -353,7 +345,7 @@ def extract_prediction_accuracy_per_qubit_isomorph(
 
         # Add the current accuracy plot to the final list of graphics
 
-        filename = ext_acc + f"Isomorph_circuit_{exec_circuits[k]}"
+        filename = ext_acc + f"Isomorph_circ_{exec_circuits[k]}"
 
         plt.plot(
             epoch_stats["Epoch"],
@@ -375,7 +367,7 @@ def extract_prediction_accuracy_per_qubit_isomorph(
 
         plt.xlabel("Epoch")
         plt.ylabel("Mean accuracy over samplings")
-        plt.title(f"Isomorph Accuracy Circuit{k+1}")
+        plt.title(f"Isomorph-respecting accuracy for circuit {k+1}")
         plt.legend()
         plt.grid(True)
         plt.savefig(filename, dpi=300, bbox_inches="tight")
@@ -392,6 +384,13 @@ def extract_prediction_accuracy_per_qubit_isomorph(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-q", "--qubits", help="Number of qubits", default=3, type=int)
+    parser.add_argument(
+        "-sub",
+        "--subsize",
+        help="Size of the subgraph to be found",
+        default=4,
+        type=int,
+    )
     parser.add_argument(
         "-c",
         "--circuits",
@@ -423,16 +422,16 @@ if __name__ == "__main__":
 
 # Location to store accuracies
 ext_accuracies = (
-    f"output/subgraph_per_qubit/Accuracies_per_qubit/"
+    f"Subgraph/node/output/accuracies/"
     if flags.find == "y"
-    else f"output/subgraph/Circuit_accuracies/"
+    else f"Subgraph/graph/output/accuracies/"
 )
 
 # location to store output tables
 ext_output = (
-    f"/Users/home/Quantum_Computing/Pennylane/Graph_ML/output/subgraph_per_qubit/"
+    f"/Users/home/Quantum_Computing/Pennylane/Subgraph/node/output/"
     if flags.find == "y"
-    else f"/Users/home/Quantum_Computing/Pennylane/Graph_ML/output/subgraph/"
+    else f"/Users/home/Quantum_Computing/Pennylane/Subgraph/graph/output/"
 )
 
 parameters = param_dict.get(flags.target, default_params)
@@ -448,14 +447,16 @@ for i in range(len(flags.circuits)):
     target_file_names.append(
         ext_output
         + (
-            "Results_approach_" + str(j) + "/Subgraph_per_qubit-approach-"
+            "Results_approach_" + str(j) + "/Subgraph_node-approach-"
             if flags.find == "y"
-            else "Results_approach_" + str(j) + "/Subgraph-approach-"
+            else "Results_approach_" + str(j) + "/Subgraph_graph-approach-"
         )
         + str(j)
         + "-"
         + str(flags.qubits)
-        + "-4-"
+        + "-"
+        + str(flags.subsize)
+        + "-"
         + str(num_params)
         + "-sampling_"
         + str(flags.samplings)
@@ -466,14 +467,16 @@ for i in range(len(flags.circuits)):
     prediction_file_names.append(
         ext_output
         + (
-            "Results_approach_" + str(j) + "/Subgraph_per_qubit-approach-"
+            "Results_approach_" + str(j) + "/Subgraph_node-approach-"
             if flags.find == "y"
-            else "Results_approach_" + str(j) + "/Subgraph-approach-"
+            else "Results_approach_" + str(j) + "/Subgraph_graph-approach-"
         )
         + str(j)
         + "-"
         + str(flags.qubits)
-        + "-4-"
+        + "-"
+        + str(flags.subsize)
+        + "-"
         + str(num_params)
         + "-sampling_"
         + str(flags.samplings)
@@ -486,7 +489,7 @@ for i in range(len(flags.circuits)):
 
 summary_run = wandb.init(
     project=(
-        "Subgraph search per qubit with Pennylane"
+        "Subgraph search per node with Pennylane"
         if flags.find == "y"
         else "Binary subgraph search with Pennylane"
     ),
@@ -495,7 +498,7 @@ summary_run = wandb.init(
 )
 
 if flags.find == "y":
-    accuracies = extract_prediction_accuracy_per_qubit_isomorph(
+    accuracies = extract_prediction_accuracy_node_isomorph(
         prediction_file_names,
         target_file_names,
         flags.samplings,
@@ -517,8 +520,21 @@ else:
     )
 
 table = wandb.Table(
-    columns=["Circuit number", "Circuit Diagram", "Parameters", "Accuracies"]
+    columns=["Circuit number", "Circuit diagram", "Parameters", "Accuracies"]
 )
+
+# Location of all circuit diagrams
+ext_diag = (
+    f"Subgraph/node/output/circuit_diagrams/circuit_"
+    if flags.find == "y"
+    else f"Subgraph/graph/output/circuit_diagrams/circuit_"
+)
+
+circuit_diagrams = []
+for i in range(10):
+    circuit_diagrams.append(ext_diag + str(i))
+
+# print(circuit_diagrams)
 
 for i in range(len(flags.circuits)):
     j = flags.circuits[i]
@@ -529,5 +545,5 @@ for i in range(len(flags.circuits)):
 
     table.add_data(j, diagram_img, parameters[i], acc_img)
 
-wandb.log({"Circuit Summary": table})
+wandb.log({"Circuit summary": table})
 wandb.finish()

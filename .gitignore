@@ -5,3 +5,4 @@ qml_venv/
 __pycache__/
 *.pt
 *.csv
+**/output/ 

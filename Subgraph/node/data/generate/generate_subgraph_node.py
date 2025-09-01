@@ -62,9 +62,9 @@ for _ in range(num_samples):
                     break
         small_array = nx.to_numpy_array(g_small).flatten()
 
-    print("Final label for the datapoint: ", label)
-    print()
-    print()
+    # print("Final label for the datapoint: ", label)
+    # print()
+    # print()
 
     # Combine main and sub graphs into 1 adjaceny matrix, by filliing out the inter-graph connections with 0s.
     big_adj = nx.to_numpy_array(g_big)  # shape (6,6)
@@ -80,11 +80,12 @@ for _ in range(num_samples):
     # print(data_point)
 
     dataset.append(data_point)
-    print("Datapoint: ", data_point)
-    print()
+    # print("Datapoint: ", data_point)
+    # print()
 
-"""dataset = torch.tensor(np.array(dataset), dtype=torch.float)
+
+dataset = torch.tensor(np.array(dataset), dtype=torch.float)
 torch.save(
     dataset,
-    "/Users/home/Quantum_Computing/Pennylane/Graph_ML/data/subgraph/graph-6_subgraph-4_per_qubit_3000.pt",
-)"""
+    "/Users/home/Quantum_Computing/Pennylane/Subgraph/node/data/datasets/graph-6_subgraph-4_per_qubit_3000.pt",
+)

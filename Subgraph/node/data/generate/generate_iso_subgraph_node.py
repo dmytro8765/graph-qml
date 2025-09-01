@@ -16,8 +16,8 @@ import random
 dataset = []
 final_dataset = []
 num_samples = 3000
-main_nodes = 8
-sub_nodes = 5
+main_nodes = 6
+sub_nodes = 4
 
 """
 Generate 2 datasets:
@@ -25,7 +25,9 @@ Generate 2 datasets:
 2. Label contains average value per node, to perform the training process itself faster.
 """
 
-""" 1. Dataset for accuracy, containing all isomorphisms. """
+""" 
+1. Dataset for accuracy, containing all isomorphisms. 
+"""
 longest_label = 0
 iso_lengths = []
 
@@ -168,7 +170,7 @@ print("MUST be: ", 1500)
 final_dataset_torch = torch.tensor(np.array(final_dataset), dtype=torch.float)
 torch.save(
     final_dataset_torch,
-    "/Users/home/Quantum_Computing/Pennylane/Graph_ML/data/subgraph/graph-8_subgraph-5_3000_iso_test.pt",
+    "/Users/home/Quantum_Computing/Pennylane/Subgraph/node/data/datasets/graph-6_subgraph-4_3000_iso_test.pt",
 )
 
 """
@@ -179,7 +181,9 @@ Final datapoint:
 - remainder -> label.
 """
 
-""" 2. Dataset for training, containing average involvement per node. """
+""" 
+2. Dataset for training, containing average involvement per node. 
+"""
 
 labels_start = main_nodes**2 + sub_nodes**2 + (main_nodes + sub_nodes) ** 2
 
@@ -235,7 +239,7 @@ final_dataset_train_torch = torch.tensor(np.array(new_dataset), dtype=torch.floa
 
 torch.save(
     final_dataset_train_torch,
-    "/Users/home/Quantum_Computing/Pennylane/Graph_ML/data/subgraph/graph-8_subgraph-5_3000_iso_train.pt",
+    "/Users/home/Quantum_Computing/Pennylane/Subgraph/node/data/datasets/graph-6_subgraph-4_3000_iso_train.pt",
 )
 
 """

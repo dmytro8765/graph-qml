@@ -1,5 +1,5 @@
 """
-Use Qiskit to get pretty visualization of each quantum circuit,
+Use Qiskit to get pretty visualization of each of the quantum circuits,
 used to solve the subgraph problem.
 """
 
@@ -550,9 +550,14 @@ for i in range(len(circ_data)):
     qc = circuit(**data["args"])
 
     fig = qc.draw("mpl", style=custom_style)
-    fig.suptitle(f"Circuit_{i}", fontsize=20)
+    fig.suptitle(f"Circuit {i}", fontsize=20)
     fig.savefig(
-        f"output/subgraph/Circuit_diagrams/Circuit_{i}.png",
+        f"graph/output/circuit_diagrams/circuit_{i}.png",
+        dpi=300,
+        bbox_inches="tight",
+    )
+    fig.savefig(
+        f"node/output/circuit_diagrams/circuit_{i}.png",
         dpi=300,
         bbox_inches="tight",
     )
