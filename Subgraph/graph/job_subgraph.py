@@ -185,12 +185,10 @@ if __name__ == "__main__":
     base = pathlib.Path(flags.base)
 
     base_output = (
-        pathlib.Path(
-            "/Users/home/Quantum_Computing/Pennylane/Graph_ML/output/subgraph_per_qubit"
-        )
+        pathlib.Path("/Users/home/Quantum_Computing/Pennylane/Subgraph/node/output")
         if flags.find == "y"
         else pathlib.Path(
-            "/Users/home/Quantum_Computing/Pennylane/Graph_ML/output/subgraph"
+            "/Users/home/Quantum_Computing/Pennylane/Subgraph/graph/output/"
         )
     )
 

@@ -33,5 +33,6 @@ for _ in range(num_samples):
     dataset.append(array)
 dataset = torch.tensor(np.array(dataset))
 torch.save(
-    dataset, "/Users/home/qiskit_env/Pennylane/data/bipartite/nodes_6-graphs_3000.pt"
+    dataset,
+    "/Users/home/Quantum_Computing/Pennylane/Bipartite/graph/data/datasets/nodes_6-graphs_3000.pt",
 )

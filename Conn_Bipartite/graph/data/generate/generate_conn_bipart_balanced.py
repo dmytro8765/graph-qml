@@ -52,5 +52,5 @@ for _ in range(num_samples):
 dataset = torch.tensor(np.array(dataset))
 torch.save(
     dataset,
-    "/Users/home/qiskit_env/Pennylane/data/connected_plus_bipartite/nodes_8-graphs_3000_balanced.pt",
+    "/Users/home/Quantum_Computing/Pennylane/Conn_Bipartite/graph/data/datasets/nodes_8-graphs_3000_balanced.pt",
 )

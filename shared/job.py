@@ -163,7 +163,7 @@ if __name__ == "__main__":
 
     base = pathlib.Path(flags.base)
     base_output = pathlib.Path(
-        "/Users/home/Quantum_Computing/Pennylane/Graph_ML/output/max_clique"
+        "/Users/home/Quantum_Computing/Pennylane/Connected/graph/output"
     )
 
     if flags.task in [
@@ -288,7 +288,9 @@ if __name__ == "__main__":
 
     ###### ADD EXTRA SAMPLES FOR CONNECTED ######
 
-    # extra_data = torch.load("/Users/home/qiskit_env/Pennylane/data/graph_connectedness/nodes_8-graphs_10_edge_cases.pt")
+    # extra_data = torch.load(
+    # "/Users/home/Quantum_Computing/Pennylane/Connected/graph/data/datasets/nodes_8-graphs_10_edge_cases.pt"
+    # )
 
     # extra_x = extra_data[:, :-1]  # shape: (7, 64)
     # extra_y = extra_data[:, -1]  # shape: (7,)

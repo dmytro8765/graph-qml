@@ -29,5 +29,5 @@ for _ in range(num_samples):
 dataset = torch.tensor(np.array(dataset))
 torch.save(
     dataset,
-    "/Users/home/Quantum_Computing/Pennylane/Graph_ML/data/graph_connectedness/nodes_4-graphs_3000.pt",
+    "/Users/home/Quantum_Computing/Pennylane/Connected/graph/data/datasets/nodes_8-graphs_3000.pt",
 )

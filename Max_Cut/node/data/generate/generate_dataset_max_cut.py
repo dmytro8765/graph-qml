@@ -10,6 +10,7 @@ dataset_plot = []
 num_samples = 3000
 qubits = 6
 
+
 # Brute-force Max-Cut for small graphs
 def max_cut_brute_force(G):
     nodes = list(G.nodes())
@@ -30,6 +31,7 @@ def max_cut_brute_force(G):
             best_cut = group.copy()
 
     return best_cut, max_cut_value
+
 
 for _ in range(num_samples):
     # Generate a connected random graph
@@ -53,8 +55,11 @@ for _ in range(num_samples):
     array = np.append(array, labels)
     dataset.append(array)
 
-dataframe_adjecency = pd.DataFrame({'Adjacencies': dataset_plot})
-dataframe_adjecency.to_csv("/Users/home/qiskit_env/Pennylane/data/max_cut/nodes_6-graphs_3000_per_qubit_ADJACENCY.csv", index=False)
+dataframe_adjecency = pd.DataFrame({"Adjacencies": dataset_plot})
+dataframe_adjecency.to_csv(
+    "/Users/home/Quantum_Computing/Pennylane/Max_Cut/node/data/datasets/nodes_6-graphs_3000_per_qubit_ADJACENCY.csv",
+    index=False,
+)
 
 # Save as tensor
 print(dataset[0])
@@ -67,6 +72,7 @@ for sample in dataset.numpy():
     for i, label in enumerate(labels):
         label_counts[i, int(label)] += 1
 
-torch.save(dataset, "/Users/home/qiskit_env/Pennylane/data/max_cut/nodes_6-graphs_3000_per_qubit.pt")
-
-
+torch.save(
+    dataset,
+    "/Users/home/Quantum_Computing/Pennylane/Max_Cut/node/data/datasets/nodes_6-graphs_300_per_qubit.pt",
+)

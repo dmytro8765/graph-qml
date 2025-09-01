@@ -58,7 +58,7 @@ dataset.append(array)
 G = nx.Graph()
 G.add_nodes_from(range(8))
 
-for i in range(7):  
+for i in range(7):
     G.add_edge(i, i + 1)
 
 G.add_edge(7, 0)
@@ -93,4 +93,7 @@ array = np.append(nx.to_numpy_array(G).flatten(), nx.is_bipartite(G))
 dataset.append(array)
 
 dataset = torch.tensor(np.array(dataset))
-torch.save(dataset, "/Users/home/qiskit_env/Pennylane/data/bipartite/nodes_8-bipartite_edge_cases.pt")
+torch.save(
+    dataset,
+    "/Users/home/Quantum_Computing/Pennylane/Bipartite/graph/data/datasets/nodes_8-bipartite_edge_cases.pt",
+)

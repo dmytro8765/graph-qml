@@ -72,5 +72,5 @@ for _ in range(num_samples):
 dataset = torch.tensor(np.array(dataset))
 torch.save(
     dataset,
-    "/Users/home/qiskit_env/Pennylane/data/clique_supervised/nodes_8-graphs_3000_per_qubit.pt",
+    "/Users/home/Quantum_Computing/Pennylane/Clique/node/data/datasets/nodes_6-graphs_3000_node.pt",
 )
