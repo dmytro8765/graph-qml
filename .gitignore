@@ -15,3 +15,5 @@ data/**/*.pt
 repo-clean/
 data/**/*.csv
 Subgraph/node/Random_baseline/*.csv
+Max_Cut/node/data/datasets/*.csv
+
